@@ -6,6 +6,8 @@
     <title>Recetario de Marquesas para Vender | 31 Postres Fríos en Vasos</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
         :root {
             --amarillo: #FFD700;
@@ -13,7 +15,7 @@
             --negro: #222222;
             --rosa: #FF6B8B;
             --verde: #4CAF50;
-            --whatsapp: #25D366; /* Color oficial WhatsApp */
+            --whatsapp: #25D366;
             --azul: #2196F3;
             --morado: #9C27B0;
             --naranja: #FF9800;
@@ -22,633 +24,179 @@
             --gris-texto: #444444;
         }
         
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Montserrat', sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
-        
-        html {
-            scroll-behavior: smooth;
-        }
-        
-        body {
-            background-color: var(--gris-claro);
-            color: var(--negro);
-            line-height: 1.6;
-            font-size: 16px;
-            overflow-x: hidden;
-        }
-        
-        /* Contenedor optimizado para que no pegue a los bordes */
-        .container {
-            width: 100%;
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 0 25px; 
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; -webkit-tap-highlight-color: transparent; }
+        html { scroll-behavior: smooth; }
+        body { background-color: var(--gris-claro); color: var(--negro); line-height: 1.6; font-size: 16px; overflow-x: hidden; }
+        .container { width: 100%; max-width: 1100px; margin: 0 auto; padding: 0 25px; }
         
         /* Banner de urgencia */
-        .banner-urgencia {
-            background-color: var(--amarillo);
-            color: var(--negro);
-            padding: 12px 20px;
-            text-align: center;
-            font-weight: 700;
-            font-size: 0.95rem;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            line-height: 1.4;
-        }
-        
-        .banner-urgencia i {
-            margin-right: 10px;
-            animation: pulse 1.5s infinite;
-            font-size: 1.1rem;
-        }
-        
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); }
-        }
+        .banner-urgencia { background-color: var(--amarillo); color: var(--negro); padding: 12px 20px; text-align: center; font-weight: 700; font-size: 0.95rem; position: sticky; top: 0; z-index: 1000; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); display: flex; align-items: center; justify-content: center; line-height: 1.4; }
+        .banner-urgencia i { margin-right: 10px; animation: pulse 1.5s infinite; font-size: 1.1rem; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
         
         /* Header */
-        header {
-            background: linear-gradient(135deg, var(--rosa) 0%, var(--naranja) 100%);
-            padding: 40px 0;
-            text-align: center;
-            color: var(--blanco);
-            box-shadow: 0 4px 20px rgba(255, 107, 139, 0.3);
-        }
+        header { background: linear-gradient(135deg, var(--rosa) 0%, var(--naranja) 100%); padding: 40px 0; text-align: center; color: var(--blanco); box-shadow: 0 4px 20px rgba(255, 107, 139, 0.3); }
+        .logo { font-size: 2.2rem; font-weight: 800; margin-bottom: 15px; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2); letter-spacing: -1px; }
+        .logo span { color: var(--amarillo); }
+        .slogan { font-size: 1.1rem; font-weight: 500; max-width: 700px; margin: 0 auto; padding: 0 10px; line-height: 1.5; }
         
-        .logo {
-            font-size: 2.2rem;
-            font-weight: 800;
-            margin-bottom: 15px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-            letter-spacing: -1px;
-        }
+        /* Hero */
+        .hero { display: flex; flex-direction: column; align-items: center; padding: 50px 25px; gap: 40px; }
+        .libro-img { width: 100%; max-width: 450px; text-align: center; display: flex; justify-content: center; }
+        .libro-img img { width: 100%; height: auto; max-width: 380px; border-radius: 20px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15); transition: transform 0.3s ease; }
+        .info-compra { width: 100%; max-width: 600px; }
+        .titulo { font-size: 2rem; font-weight: 800; margin-bottom: 20px; color: var(--negro); line-height: 1.2; }
+        .descripcion { font-size: 1.05rem; margin-bottom: 25px; color: var(--gris-texto); line-height: 1.7; }
         
-        .logo span {
-            color: var(--amarillo);
-        }
+        /* Precio */
+        .precio { background: linear-gradient(to right, var(--verde), #1976D2); color: var(--blanco); padding: 25px; border-radius: 20px; text-align: center; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(33, 150, 243, 0.25); position: relative; overflow: hidden; }
+        .precio-anterior { text-decoration: line-through; font-size: 1.1rem; opacity: 0.85; margin-bottom: 5px; }
+        .precio-actual { font-size: 3rem; font-weight: 800; margin: 5px 0 15px 0; line-height: 1; text-shadow: 2px 2px 0 rgba(0,0,0,0.1); }
+        .precio-oferta { font-size: 0.9rem; font-weight: 700; background-color: var(--rosa); display: inline-block; padding: 8px 15px; border-radius: 50px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 15px; }
         
-        .slogan {
-            font-size: 1.1rem;
-            font-weight: 500;
-            max-width: 700px;
-            margin: 0 auto;
-            padding: 0 10px;
-            line-height: 1.5;
-        }
+        .contador { display: flex; justify-content: center; gap: 12px; margin: 20px 0 10px; flex-wrap: wrap; }
+        .contador-item { background-color: rgba(0, 0, 0, 0.25); color: var(--blanco); padding: 10px; border-radius: 10px; text-align: center; min-width: 65px; backdrop-filter: blur(5px); }
+        .contador-numero { font-size: 1.4rem; font-weight: 700; line-height: 1.2; }
+        .contador-texto { font-size: 0.75rem; text-transform: uppercase; font-weight: 500; margin-top: 2px; }
         
-        /* Sección principal (HERO) */
-        .hero {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 50px 25px;
-            gap: 40px;
-        }
+        /* Botones */
+        .btn-comprar { background-color: var(--naranja); color: var(--blanco); border: none; padding: 18px 30px; font-size: 1.2rem; font-weight: 800; border-radius: 50px; cursor: pointer; display: block; width: 100%; transition: all 0.3s ease; box-shadow: 0 8px 20px rgba(255, 152, 0, 0.35); margin-top: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .btn-comprar:active { transform: scale(0.98); }
+        .btn-comprar:hover { background-color: var(--amarillo-oscuro); transform: translateY(-3px); box-shadow: 0 12px 25px rgba(255, 152, 0, 0.45); }
+        .btn-comprar i { margin-right: 10px; }
         
-        .libro-img {
-            width: 100%;
-            max-width: 450px;
-            text-align: center;
-            display: flex;
-            justify-content: center;
-        }
-        
-        .libro-img img {
-            width: 100%;
-            height: auto;
-            max-width: 380px;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-            transition: transform 0.3s ease;
-        }
-        
-        .info-compra {
-            width: 100%;
-            max-width: 600px;
-        }
-        
-        .titulo {
-            font-size: 2rem;
-            font-weight: 800;
-            margin-bottom: 20px;
-            color: var(--negro);
-            line-height: 1.2;
-        }
-        
-        .descripcion {
-            font-size: 1.05rem;
-            margin-bottom: 25px;
-            color: var(--gris-texto);
-            line-height: 1.7;
-        }
-        
-        /* Caja de Precio */
-        .precio {
-            background: linear-gradient(to right, var(--verde), #1976D2);
-            color: var(--blanco);
-            padding: 25px;
-            border-radius: 20px;
-            text-align: center;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 25px rgba(33, 150, 243, 0.25);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .precio-anterior {
-            text-decoration: line-through;
-            font-size: 1.1rem;
-            opacity: 0.85;
-            margin-bottom: 5px;
-        }
-        
-        .precio-actual {
-            font-size: 3rem;
-            font-weight: 800;
-            margin: 5px 0 15px 0;
-            line-height: 1;
-            text-shadow: 2px 2px 0 rgba(0,0,0,0.1);
-        }
-        
-        .precio-oferta {
-            font-size: 0.9rem;
-            font-weight: 700;
-            background-color: var(--rosa);
-            display: inline-block;
-            padding: 8px 15px;
-            border-radius: 50px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            margin-bottom: 15px;
-        }
-        
-        .contador {
-            display: flex;
-            justify-content: center;
-            gap: 12px;
-            margin: 20px 0 10px;
-            flex-wrap: wrap;
-        }
-        
-        .contador-item {
-            background-color: rgba(0, 0, 0, 0.25);
-            color: var(--blanco);
-            padding: 10px;
-            border-radius: 10px;
-            text-align: center;
-            min-width: 65px;
-            backdrop-filter: blur(5px);
-        }
-        
-        .contador-numero {
-            font-size: 1.4rem;
-            font-weight: 700;
-            line-height: 1.2;
-        }
-        
-        .contador-texto {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            font-weight: 500;
-            margin-top: 2px;
-        }
-        
-        .btn-comprar {
-            background-color: var(--naranja);
-            color: var(--blanco);
-            border: none;
-            padding: 18px 30px;
-            font-size: 1.2rem;
-            font-weight: 800;
-            border-radius: 50px;
-            cursor: pointer;
-            display: block;
-            width: 100%;
-            transition: all 0.3s ease;
-            box-shadow: 0 8px 20px rgba(255, 152, 0, 0.35);
-            margin-top: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .btn-comprar:active {
-            transform: scale(0.98);
-        }
-        
-        .btn-comprar:hover {
-            background-color: var(--amarillo-oscuro);
-            transform: translateY(-3px);
-            box-shadow: 0 12px 25px rgba(255, 152, 0, 0.45);
-        }
-        
-        .btn-comprar i {
-            margin-right: 10px;
-        }
-        
-        /* Secciones Generales */
-        .seccion {
-            padding: 60px 0;
-            border-radius: 0;
-            margin: 0;
-        }
-        
-        .seccion-titulo {
-            text-align: center;
-            font-size: 1.8rem;
-            font-weight: 800;
-            margin-bottom: 40px;
-            color: var(--blanco);
-            padding: 0 15px;
-            line-height: 1.3;
-        }
-        
+        /* Estilos Generales Secciones */
+        .seccion { padding: 60px 0; border-radius: 0; margin: 0; }
+        .seccion-titulo { text-align: center; font-size: 1.8rem; font-weight: 800; margin-bottom: 40px; color: var(--blanco); padding: 0 15px; line-height: 1.3; }
         .seccion-rosa { background-color: var(--rosa); }
         .seccion-verde { background-color: var(--verde); }
         .seccion-azul { background-color: var(--azul); }
         .seccion-morada { background-color: var(--morado); }
         .seccion-naranja { background-color: var(--naranja); }
         
-        /* Grid de Características */
-        .caracteristicas {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 25px;
-        }
+        /* Features */
+        .caracteristicas { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 25px; }
+        .caracteristica { background-color: var(--blanco); padding: 30px 20px; border-radius: 20px; text-align: center; transition: transform 0.3s ease; box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+        .caracteristica:hover { transform: translateY(-5px); }
+        .caracteristica i { font-size: 3rem; margin-bottom: 20px; color: inherit; }
+        .caracteristica h3 { font-size: 1.25rem; margin-bottom: 10px; font-weight: 700; color: var(--negro); }
+        .caracteristica p { font-size: 0.95rem; color: var(--gris-texto); }
         
-        .caracteristica {
-            background-color: var(--blanco);
-            padding: 30px 20px;
-            border-radius: 20px;
-            text-align: center;
-            transition: transform 0.3s ease;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
-        }
-        
-        .caracteristica:hover {
-            transform: translateY(-5px);
-        }
-        
-        .caracteristica i {
-            font-size: 3rem;
-            margin-bottom: 20px;
-            color: inherit;
-        }
-        
-        .caracteristica h3 {
-            font-size: 1.25rem;
-            margin-bottom: 10px;
-            font-weight: 700;
-            color: var(--negro);
-        }
-        
-        .caracteristica p {
-            font-size: 0.95rem;
-            color: var(--gris-texto);
-        }
-        
-        /* Contenido Mixto (Texto + Lista) */
-        .seccion-contenido {
-            display: flex;
-            flex-direction: column;
-            gap: 40px;
-        }
-        
-        .seccion-texto p {
-            margin-bottom: 20px;
-            font-size: 1.05rem;
-            color: var(--blanco);
-        }
-        
-        .seccion-lista {
-            width: 100%;
-            background-color: var(--blanco);
-            padding: 35px 30px;
-            border-radius: 20px;
-            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
-        }
-        
-        .seccion-lista ul {
-            list-style-type: none;
-        }
-        
-        .seccion-lista li {
-            margin-bottom: 15px;
-            font-size: 1.05rem;
-            padding-left: 30px;
-            position: relative;
-            color: var(--gris-texto);
-        }
-        
-        .seccion-lista li:last-child {
-            margin-bottom: 0;
-        }
-        
-        .seccion-lista li:before {
-            content: "\f00c"; /* Check icon from FontAwesome */
-            font-family: "Font Awesome 6 Free";
-            font-weight: 900;
-            color: var(--verde);
-            position: absolute;
-            left: 0;
-            top: 2px;
-        }
+        /* Contenido Mixto */
+        .seccion-contenido { display: flex; flex-direction: column; gap: 40px; }
+        .seccion-texto p { margin-bottom: 20px; font-size: 1.05rem; color: var(--blanco); }
+        .seccion-lista { width: 100%; background-color: var(--blanco); padding: 35px 30px; border-radius: 20px; box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
+        .seccion-lista ul { list-style-type: none; }
+        .seccion-lista li { margin-bottom: 15px; font-size: 1.05rem; padding-left: 30px; position: relative; color: var(--gris-texto); }
+        .seccion-lista li:before { content: "\f00c"; font-family: "Font Awesome 6 Free"; font-weight: 900; color: var(--verde); position: absolute; left: 0; top: 2px; }
         
         /* Testimonios */
-        .testimonios {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 25px;
-        }
-        
-        .testimonio {
-            background-color: var(--blanco);
-            padding: 25px;
-            border-radius: 20px;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
-        }
-        
-        .testimonio-img {
-            width: 100%;
-            margin-bottom: 15px;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
-        }
-        
-        .testimonio-img img {
-            width: 100%;
-            height: auto;
-            display: block;
-            transition: transform 0.5s ease;
-        }
-        
-        .testimonio:hover .testimonio-img img {
-            transform: scale(1.05);
-        }
-        
-        .testimonio-texto {
-            font-size: 1rem;
-            margin-bottom: 20px;
-            color: var(--gris-texto);
-            font-style: italic;
-        }
-        
-        .testimonio-autor {
-            font-weight: 700;
-            color: var(--naranja);
-            margin-top: auto;
-            display: flex;
-            align-items: center;
-        }
-        
-        .testimonio-autor::before {
-            content: '';
-            display: inline-block;
-            width: 20px;
-            height: 2px;
-            background-color: var(--naranja);
-            margin-right: 10px;
-        }
+        .testimonios { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; }
+        .testimonio { background-color: var(--blanco); padding: 25px; border-radius: 20px; display: flex; flex-direction: column; box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+        .testimonio-img { width: 100%; margin-bottom: 15px; border-radius: 12px; overflow: hidden; box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1); }
+        .testimonio-img img { width: 100%; height: auto; display: block; transition: transform 0.5s ease; }
+        .testimonio:hover .testimonio-img img { transform: scale(1.05); }
+        .testimonio-texto { font-size: 1rem; margin-bottom: 20px; color: var(--gris-texto); font-style: italic; }
+        .testimonio-autor { font-weight: 700; color: var(--naranja); margin-top: auto; display: flex; align-items: center; }
+        .testimonio-autor::before { content: ''; display: inline-block; width: 20px; height: 2px; background-color: var(--naranja); margin-right: 10px; }
         
         /* FAQ */
-        .faq-item {
-            background-color: var(--blanco);
-            margin-bottom: 15px;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-        
-        .faq-pregunta {
-            padding: 20px;
-            font-weight: 700;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 1.05rem;
-            color: var(--negro);
-            user-select: none;
-        }
-        
-        .faq-pregunta i {
-            transition: transform 0.3s ease;
-            color: var(--naranja);
-        }
-        
-        .faq-item.activo .faq-pregunta i {
-            transform: rotate(180deg);
-        }
-        
-        .faq-respuesta {
-            padding: 0 20px;
-            max-height: 0;
-            overflow: hidden;
-            transition: all 0.3s ease;
-            font-size: 1rem;
-            color: var(--gris-texto);
-            line-height: 1.6;
-        }
-        
-        .faq-item.activo .faq-respuesta {
-            padding: 0 20px 25px 20px;
-            max-height: 500px;
-        }
+        .faq-item { background-color: var(--blanco); margin-bottom: 15px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .faq-pregunta { padding: 20px; font-weight: 700; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 1.05rem; color: var(--negro); user-select: none; }
+        .faq-pregunta i { transition: transform 0.3s ease; color: var(--naranja); }
+        .faq-item.activo .faq-pregunta i { transform: rotate(180deg); }
+        .faq-respuesta { padding: 0 20px; max-height: 0; overflow: hidden; transition: all 0.3s ease; font-size: 1rem; color: var(--gris-texto); line-height: 1.6; }
+        .faq-item.activo .faq-respuesta { padding: 0 20px 25px 20px; max-height: 500px; }
         
         /* Recetas preview */
-        .recetas-preview {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-        }
-        
-        .receta-item {
-            background-color: rgba(255, 255, 255, 0.95);
-            padding: 20px 15px;
-            border-radius: 15px;
-            text-align: center;
-            font-weight: 600;
-            font-size: 0.95rem;
-            color: var(--gris-texto);
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-        }
-        
-        .receta-item:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-            background-color: var(--blanco);
-        }
-        
-        .receta-item i {
-            color: var(--rosa);
-            margin-bottom: 10px;
-            font-size: 1.8rem;
-        }
+        .recetas-preview { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; margin-top: 20px; }
+        .receta-item { background-color: rgba(255, 255, 255, 0.95); padding: 20px 15px; border-radius: 15px; text-align: center; font-weight: 600; font-size: 0.95rem; color: var(--gris-texto); transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
+        .receta-item:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1); background-color: var(--blanco); }
+        .receta-item i { color: var(--rosa); margin-bottom: 10px; font-size: 1.8rem; }
         
         /* Footer */
-        footer {
-            background-color: var(--negro);
-            color: var(--blanco);
-            padding: 50px 0 30px;
-            text-align: center;
+        footer { background-color: var(--negro); color: var(--blanco); padding: 50px 0 30px; text-align: center; }
+        .footer-logo { font-size: 2rem; font-weight: 800; margin-bottom: 20px; }
+        .footer-logo span { color: var(--amarillo); }
+        .copyright { margin-top: 25px; opacity: 0.6; font-size: 0.85rem; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
+
+        /* ESTILOS DEL PANEL ADMINISTRATIVO (OCULTO) */
+        #admin-panel {
+            display: none; /* Oculto por defecto */
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 300px;
+            background-color: #1a1a1a;
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 9999;
+            font-size: 0.9rem;
+            border: 1px solid #333;
         }
-        
-        .footer-logo {
-            font-size: 2rem;
-            font-weight: 800;
-            margin-bottom: 20px;
-        }
-        
-        .footer-logo span {
-            color: var(--amarillo);
-        }
-        
-        .copyright {
-            margin-top: 25px;
-            opacity: 0.6;
-            font-size: 0.85rem;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255,255,255,0.1);
-        }
-        
-        /* --- MEDIA QUERIES (ADAPTACIÓN A MÓVIL) --- */
-        
-        /* Tablet y Escritorio */
+        #admin-panel h3 { color: var(--amarillo); margin-bottom: 15px; font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center; }
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #333; }
+        .stat-val { font-weight: bold; font-size: 1.2rem; }
+        .ctr-box { background-color: var(--verde); color: white; padding: 10px; border-radius: 8px; text-align: center; margin-top: 15px; }
+        .ctr-val { font-size: 1.5rem; font-weight: 800; }
+        .refresh-btn { background: var(--azul); border: none; color: white; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; }
+
+        /* Media Queries */
         @media (min-width: 768px) {
-            .container {
-                padding: 0 30px;
-            }
-            
-            .hero {
-                flex-direction: row;
-                justify-content: center;
-                align-items: center;
-                padding: 60px 0;
-            }
-            
-            .libro-img {
-                flex: 1;
-                justify-content: flex-end;
-                padding-right: 40px;
-            }
-            
-            .info-compra {
-                flex: 1;
-                text-align: left;
-                padding-left: 20px;
-            }
-            
-            .seccion-contenido {
-                flex-direction: row;
-                align-items: center;
-            }
-            
+            .container { padding: 0 30px; }
+            .hero { flex-direction: row; justify-content: center; align-items: center; padding: 60px 0; }
+            .libro-img { flex: 1; justify-content: flex-end; padding-right: 40px; }
+            .info-compra { flex: 1; text-align: left; padding-left: 20px; }
+            .seccion-contenido { flex-direction: row; align-items: center; }
             .seccion-texto { flex: 1; }
             .seccion-lista { flex: 1; }
-            
-            .titulo {
-                font-size: 2.5rem;
-            }
-            
-            .precio-actual {
-                font-size: 3.5rem;
-            }
+            .titulo { font-size: 2.5rem; }
+            .precio-actual { font-size: 3.5rem; }
         }
-        
-        /* Móvil (Teléfonos) */
         @media (max-width: 767px) {
-            .container {
-                padding: 0 20px;
-            }
-
-            .hero {
-                text-align: center;
-                padding-top: 30px;
-            }
-            
-            .info-compra {
-                margin: 0 auto;
-            }
-            
-            .titulo {
-                font-size: 1.7rem; 
-            }
-            
-            .banner-urgencia {
-                font-size: 0.85rem;
-                padding: 10px 15px;
-            }
-            
-            .logo {
-                font-size: 1.8rem;
-            }
-            
-            .precio-actual {
-                font-size: 2.5rem;
-            }
-            
-            .contador-item {
-                min-width: 60px;
-                padding: 8px;
-            }
-            
-            .btn-comprar {
-                font-size: 1.1rem;
-                padding: 16px 20px;
-                white-space: normal;
-            }
-            
-            .seccion-titulo {
-                font-size: 1.5rem;
-                margin-bottom: 30px;
-            }
-            
-            .recetas-preview {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .caracteristica {
-                padding: 25px 20px;
-            }
+            .container { padding: 0 20px; }
+            .hero { text-align: center; padding-top: 30px; }
+            .info-compra { margin: 0 auto; }
+            .titulo { font-size: 1.7rem; }
+            .banner-urgencia { font-size: 0.85rem; padding: 10px 15px; }
+            .logo { font-size: 1.8rem; }
+            .precio-actual { font-size: 2.5rem; }
+            .contador-item { min-width: 60px; padding: 8px; }
+            .btn-comprar { font-size: 1.1rem; padding: 16px 20px; white-space: normal; }
+            .seccion-titulo { font-size: 1.5rem; margin-bottom: 30px; }
+            .recetas-preview { grid-template-columns: repeat(2, 1fr); }
+            .caracteristica { padding: 25px 20px; }
+            #admin-panel { width: 90%; left: 5%; bottom: 10px; right: auto; }
         }
-
-        /* Móviles muy pequeños */
         @media (max-width: 380px) {
-            .recetas-preview {
-                grid-template-columns: 1fr;
-            }
-            .precio-oferta {
-                font-size: 0.8rem;
-            }
-            .contador-item {
-                min-width: 50px;
-            }
+            .recetas-preview { grid-template-columns: 1fr; }
+            .precio-oferta { font-size: 0.8rem; }
+            .contador-item { min-width: 50px; }
         }
     </style>
 </head>
 <body>
+    <div id="admin-panel">
+        <h3>Panel Métricas <button class="refresh-btn" onclick="cargarEstadisticas()"><i class="fas fa-sync"></i></button></h3>
+        <div class="stat-row">
+            <span>👁️ Visitas Totales:</span>
+            <span class="stat-val" id="total-visitas">...</span>
+        </div>
+        <div class="stat-row">
+            <span>👆 Clics en Botón:</span>
+            <span class="stat-val" id="total-clics">...</span>
+        </div>
+        <div class="ctr-box">
+            <div>CTR (Conversión)</div>
+            <div class="ctr-val" id="total-ctr">...%</div>
+        </div>
+        <div style="font-size: 0.7rem; color: #888; margin-top: 10px; text-align: center;">
+            Datos desde Supabase
+        </div>
+    </div>
+
     <div class="banner-urgencia">
         <div><i class="fas fa-clock"></i> <strong>OFERTA FLASH:</strong> ¡Recetario a solo 1000 Bs!</div>
     </div>
@@ -928,7 +476,85 @@
     </footer>
     
     <script>
-        // Contador regresivo hasta el 31 de diciembre de 2025
+        // --- 1. CONFIGURACIÓN SUPABASE ---
+        const SUPABASE_URL = 'https://amvtujtjxspgwroxfwom.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtdnR1anRqeHNwZ3dyb3hmd29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2NDY5NzQsImV4cCI6MjA4MDIyMjk3NH0.WemQSsm9e8KhAh2BWzMPiKBPCE0P9cMlYL0zor58kDg';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // --- 2. REGISTRAR EVENTOS ---
+        
+        // Registrar visita apenas carga la página
+        async function registrarVisita() {
+            try {
+                await supabase.from('site_stats').insert([{ evento: 'visita' }]);
+                console.log('Visita registrada');
+            } catch (err) {
+                console.error('Error registrando visita:', err);
+            }
+        }
+        registrarVisita();
+
+        // Función para registrar clic (se llama al abrir modal)
+        async function registrarClic() {
+            try {
+                await supabase.from('site_stats').insert([{ evento: 'clic' }]);
+                console.log('Clic registrado');
+            } catch (err) {
+                console.error('Error registrando clic:', err);
+            }
+        }
+
+        // --- 3. LÓGICA DEL PANEL ADMINISTRATIVO ---
+        
+        // Verificar si estamos en modo admin (ejemplo: tudominio.com/pagina.html?admin=si)
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('admin')) {
+            document.getElementById('admin-panel').style.display = 'block';
+            cargarEstadisticas();
+        }
+
+        async function cargarEstadisticas() {
+            const btnRefresh = document.querySelector('.refresh-btn');
+            btnRefresh.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            try {
+                // Obtener todas las filas (Supabase limita a 1000 por defecto, para escalar necesitarás select count)
+                // Para este uso simple, usaremos select count
+                
+                // Contar visitas
+                const { count: visitas, error: errVisitas } = await supabase
+                    .from('site_stats')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('evento', 'visita');
+                
+                // Contar clics
+                const { count: clics, error: errClics } = await supabase
+                    .from('site_stats')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('evento', 'clic');
+
+                if (errVisitas || errClics) throw new Error('Error en consulta');
+
+                // Calcular CTR
+                const ctr = visitas > 0 ? ((clics / visitas) * 100).toFixed(2) : 0;
+
+                // Actualizar DOM
+                document.getElementById('total-visitas').innerText = visitas || 0;
+                document.getElementById('total-clics').innerText = clics || 0;
+                document.getElementById('total-ctr').innerText = ctr + '%';
+
+            } catch (error) {
+                console.error('Error cargando stats:', error);
+                document.getElementById('total-ctr').innerText = 'Error';
+            } finally {
+                btnRefresh.innerHTML = '<i class="fas fa-sync"></i>';
+            }
+        }
+
+
+        // --- 4. LÓGICA DE LA LANDING PAGE ORIGINAL ---
+
+        // Contador regresivo
         function actualizarContador() {
             const fechaLimite = new Date('December 31, 2025 23:59:59').getTime();
             const ahora = new Date().getTime();
@@ -940,29 +566,22 @@
                 const minutos = Math.floor((diferencia % (1000 * 60 * 60)) / (1000 * 60));
                 const segundos = Math.floor((diferencia % (1000 * 60)) / 1000);
                 
-                // Función auxiliar para actualizar
                 const safeUpdate = (id, val) => {
                     const el = document.getElementById(id);
                     if(el) el.textContent = val.toString().padStart(2, '0');
                 };
 
-                safeUpdate('dias', dias);
-                safeUpdate('horas', horas);
-                safeUpdate('minutos', minutos);
-                safeUpdate('segundos', segundos);
+                safeUpdate('dias', dias); safeUpdate('horas', horas);
+                safeUpdate('minutos', minutos); safeUpdate('segundos', segundos);
                 
-                safeUpdate('dias-final', dias);
-                safeUpdate('horas-final', horas);
-                safeUpdate('minutos-final', minutos);
-                safeUpdate('segundos-final', segundos);
+                safeUpdate('dias-final', dias); safeUpdate('horas-final', horas);
+                safeUpdate('minutos-final', minutos); safeUpdate('segundos-final', segundos);
             } else {
                 const msg = '<div style="color:white; font-size: 1.2rem; font-weight: 700;">¡Oferta terminada!</div>';
                 if(document.getElementById('contador')) document.getElementById('contador').innerHTML = msg;
                 if(document.getElementById('contador-final')) document.getElementById('contador-final').innerHTML = msg;
             }
         }
-        
-        // Inicializar contador
         actualizarContador();
         setInterval(actualizarContador, 1000);
         
@@ -970,14 +589,11 @@
         document.querySelectorAll('.faq-pregunta').forEach(pregunta => {
             pregunta.addEventListener('click', () => {
                 const item = pregunta.parentElement;
-                
-                // Cerrar otros FAQ abiertos para efecto acordeón limpio
                 document.querySelectorAll('.faq-item').forEach(otherItem => {
                     if (otherItem !== item && otherItem.classList.contains('activo')) {
                         otherItem.classList.remove('activo');
                     }
                 });
-
                 item.classList.toggle('activo');
             });
         });
@@ -985,8 +601,11 @@
         // Botones de compra y Modal con WhatsApp
         document.querySelectorAll('.btn-comprar').forEach(boton => {
             boton.addEventListener('click', () => {
-                // Configuración de WhatsApp
-                const numeroTelefono = "584128939324"; // Número formateado con código de Venezuela
+                
+                // >>> NUEVO: Registrar Clic en Supabase <<<
+                registrarClic();
+
+                const numeroTelefono = "584128939324"; 
                 const mensaje = encodeURIComponent("Hola, me interesa comprar el Recetario de Marquesas en Oferta por 1000 Bs.");
                 const urlWhatsApp = `https://wa.me/${numeroTelefono}?text=${mensaje}`;
 
@@ -1005,7 +624,6 @@
                     box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: popIn 0.3s ease;
                 `;
                 
-                // Contenido del Modal con el botón de WhatsApp integrado
                 modalContent.innerHTML = `
                     <div style="color: var(--verde); font-size: 3.5rem; margin-bottom: 15px;"><i class="fas fa-check-circle"></i></div>
                     <h2 style="color: var(--negro); margin-bottom: 10px; line-height: 1.2;">¡Excelente decisión!</h2>
@@ -1037,15 +655,13 @@
                 document.getElementById('cerrar-modal').addEventListener('click', () => {
                     document.body.removeChild(modal);
                 });
-                
-                // Cerrar al hacer clic fuera del contenido del modal
                 modal.addEventListener('click', (e) => {
                     if(e.target === modal) document.body.removeChild(modal);
                 });
             });
         });
         
-        // Animaciones simples al hacer scroll
+        // Animaciones scroll
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -1064,3 +680,4 @@
     </script>
 </body>
 </html>
+
