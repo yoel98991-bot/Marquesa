@@ -4,6 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Almacén · Finanzas y Fórmulas</title>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Almacén Pro">
+  <meta name="theme-color" content="#f2f2f7">
+  
+  <link rel="manifest" href="manifest.json">
+  
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
@@ -502,6 +511,15 @@
 </div>
 
 <script>
+  // Registro del Service Worker para soporte offline
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js')
+        .then(reg => console.log('SW registrado', reg))
+        .catch(err => console.log('Error SW', err));
+    });
+  }
+
   (function(){
     "use strict";
 
@@ -890,7 +908,6 @@
       document.getElementById('modal-ingreso').classList.add('active');
     };
 
-    // Evento para cerrar modal de ingreso (corregido)
     document.getElementById('cerrar-modal-ingreso').addEventListener('click', () => {
       document.getElementById('modal-ingreso').classList.remove('active');
     });
@@ -971,7 +988,6 @@
       const costoPorPaquete = paquetes > 0 ? (costoTotalReceta / paquetes) : 0;
       const costoPorUnidadSuelta = totalUnidades > 0 ? (costoTotalReceta / totalUnidades) : 0;
 
-      // Actualizar costos internos
       if (recetaActual.productoResultante.tipo === 'compuesto') {
          const pPaq = encontrarProducto(recetaActual.productoResultante.paquete.nombre);
          if (pPaq && paquetes > 0) pPaq.costo = costoPorPaquete;
@@ -1012,7 +1028,6 @@
        const cantidad = parseFloat(document.getElementById('cantidad-produccion').value) || 1;
        const totalUnidades = cantidad * recetaActual.unidadesPorProduccion;
        
-       // VALIDACIÓN ESTRICTA DE STOCK
        for (let ing of recetaActual.ingredientes) {
          const prod = encontrarProducto(ing.nombre);
          if (!prod) { mostrarToast(`Producto "${ing.nombre}" no existe en inventario`, 2500); return; }
@@ -1035,7 +1050,6 @@
          }
        }
        
-       // DESCUENTO DE STOCK
        for (let ing of recetaActual.ingredientes) {
          const p = encontrarProducto(ing.nombre);
          p.cantidad -= convertirABase(ing.cantidad * cantidad, ing.unidad, p.unidad, ing.nombre);
@@ -1063,7 +1077,6 @@
        mostrarToast('✅ ¡Producción completada y registrada!', 2500);
     });
 
-    // ---------- CONVERSIÓN DE SUELTAS ----------
     document.getElementById('convertir-sueltas').addEventListener('click', () => {
         if (!recetaActual || recetaActual.productoResultante.tipo !== 'compuesto') return;
         const up = recetaActual.productoResultante.paquete.unidadesPorPaquete;
@@ -1082,7 +1095,6 @@
         mostrarToast(`📦 Convertido ${up} unidades en 1 paquete`);
     });
 
-    // ---------- CREACIÓN DE RECETAS ----------
     document.getElementById('receta-unidad').addEventListener('input', () => {
       document.getElementById('label-unidad-base').textContent = document.getElementById('receta-unidad').value || 'unidad';
     });
@@ -1494,7 +1506,6 @@
 
     document.getElementById('buscar-producto').addEventListener('input', e => renderizarProductos(e.target.value));
     
-    // Iniciar App
     cargarDatos(); 
     renderizarProductos();
     renderizarClientes();
