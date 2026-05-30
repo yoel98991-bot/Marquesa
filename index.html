@@ -1,3 +1,7 @@
+
+
+
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -853,13 +857,22 @@
       document.getElementById('lista-productos').innerHTML = filtrados.map(prod => {
         const cant = Number.isInteger(prod.cantidad) ? prod.cantidad : prod.cantidad.toFixed(2);
         let tagFinanciero = '';
+        
+        // Conversión a kilos para mostrar total disponible
+        let infoKilos = '';
+        if (prod.unidad && prod.unidad.toLowerCase().includes('saco')) {
+            const kgPerSaco = prod.nombre.toLowerCase().includes('harina') ? 45 : 50;
+            const totalKg = (cant * kgPerSaco).toFixed(2);
+            infoKilos = `<div style="font-size: 13px; color: #007aff; margin-top: 4px; font-weight: 600;">Equivale a: ${totalKg} kg disponibles</div>`;
+        }
+        
         if (esProductoFinal(prod.nombre)) {
           tagFinanciero = `<span class="product-price">Venta Público: ${formatearDinero(prod.precio)}</span>`;
         } else {
           let extraInfo = '';
           if (prod.unidad === 'sacos') {
             const kg = prod.nombre.toLowerCase().includes('harina') ? 45 : 50;
-            extraInfo = ` <span style="color:#c6c6c8; font-weight:400;">(${kg}kg)</span>`;
+            extraInfo = ` <span style="color:#c6c6c8; font-weight:400;">(${kg}kg c/u)</span>`;
           }
           tagFinanciero = `<span class="product-cost">Costo Inversión: ${formatearDinero(prod.costo)} / ${prod.unidad}${extraInfo}</span>`;
         }
@@ -868,6 +881,7 @@
             <div class="product-info">
               <div class="product-name">${prod.nombre}</div>
               <div class="product-stock">${cant} <span class="product-unit">${prod.unidad}</span></div>
+              ${infoKilos}
               ${tagFinanciero}
             </div>
             <div class="product-actions">
