@@ -449,7 +449,7 @@
     </div>
   </div>
 
-  <!-- Modal de Abono (mejorado) -->
+  <!-- Modal de Abono -->
   <div class="modal-overlay" id="modal-abono">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -572,101 +572,6 @@
   const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnZnRvbXJieHZyb3FjZ2lvYmNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNTkyNzcsImV4cCI6MjA5NTczNTI3N30.DF5LXMGVrNtJq4lsoCPzLBOM8hJmq5JzRYMUKykJvIU'; // REEMPLAZA ESTO
   const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-  async function iniciarConexion() {
-      const lbl = document.getElementById('lbl-carga');
-      
-      try {
-          lbl.textContent = 'Conectando a Supabase...';
-          const { data, error } = await supabaseClient.from('productos').select('id').limit(1);
-          
-          if (error) throw error;
-          
-          lbl.textContent = '✅ Conexión exitosa';
-          setTimeout(() => {
-              document.getElementById('pantalla-carga').style.display = 'none';
-              mostrarToast('¡Sincronizado con la nube!', 2000);
-          }, 1000);
-          
-      } catch (e) {
-          lbl.textContent = '❌ Error en conexión';
-          lbl.style.color = '#ff3b30';
-          console.error(e);
-          mostrarToast('Error conectando a Supabase: ' + e.message, 5000);
-      }
-  }
-  
-  iniciarConexion();
-
-  async function sincronizarRecetaSupabase(receta) {
-      try {
-          const ingredientesJson = receta.ingredientes.map(i => ({ nombre: i.nombre, cantidad: i.cantidad, unidad: i.unidad }));
-          
-          let sueltoNom = receta.productoResultante?.suelto?.nombre || '';
-          let paqNom = receta.productoResultante?.paquete?.nombre || null;
-          let uPaq = receta.productoResultante?.paquete?.unidadesPorPaquete || 0;
-          let bolsaNom = receta.productoResultante?.insumoEmpaque?.nombre || null;
-
-          const payload = {
-              p_nombre: receta.nombre,
-              p_unidad_produccion: receta.unidadProduccion,
-              p_unidades_por_produccion: receta.unidadesPorProduccion,
-              p_tipo_resultado: receta.productoResultante.tipo,
-              p_suelto_nombre: sueltoNom,
-              p_paquete_nombre: paqNom,
-              p_unidades_por_paquete: uPaq,
-              p_bolsa_nombre: bolsaNom,
-              p_ingredientes: ingredientesJson
-          };
-
-          const { data, error } = await supabaseClient.rpc('crear_receta_nube', payload);
-          if(error) throw error;
-          console.log("Receta guardada en nube:", data);
-      } catch(e) {
-          console.error("Error al sincronizar receta:", e);
-      }
-  }
-
-  async function sincronizarVentaSupabase(clienteNombre, productoId, cantidad, precioUnit) {
-      try {
-          let clienteId;
-          const { data: clientesSup, error: errC } = await supabaseClient.from('clientes').select('id').eq('nombre', clienteNombre);
-          
-          if (clientesSup && clientesSup.length > 0) {
-              clienteId = clientesSup[0].id;
-          } else {
-              const { data: nvoCliente, error: errN } = await supabaseClient.from('clientes').insert([{ nombre: clienteNombre }]).select();
-              if (nvoCliente) clienteId = nvoCliente[0].id;
-          }
-
-          if (clienteId && productoId) {
-             const { data, error } = await supabaseClient.rpc('registrar_venta', {
-                 p_cliente_id: clienteId,
-                 p_producto_id: productoId,
-                 p_cantidad: cantidad,
-                 p_precio_unitario: precioUnit
-             });
-             if(error) console.error("Error al registrar venta en la nube:", error);
-             else console.log("Venta sincronizada en la nube:", data);
-          }
-      } catch(e) {
-          console.error("Error de conexión a Supabase", e);
-      }
-  }
-
-  async function sincronizarProduccionSupabase(recetaId, cantidad, costoMO = 0) {
-      try {
-          const { data, error } = await supabaseClient.rpc('ejecutar_produccion', {
-              p_receta_id: recetaId,
-              p_multiplicador: cantidad,
-              p_costo_mo: costoMO
-          });
-          if(error) console.error("Error en producción en la nube:", error);
-          else console.log("Producción sincronizada en la nube:", data);
-      } catch(e) {
-          console.error("Error de conexión a Supabase", e);
-      }
-  }
-
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js')
@@ -678,7 +583,7 @@
   (function(){
     "use strict";
 
-    // Productos iniciales (se mantienen igual)
+    // Productos iniciales
     const PRODUCTOS_INICIALES = [
       { nombre: "Harina", cantidad: 0, unidad: "sacos", costo: 38.5, precio: 0 },
       { nombre: "Azúcar", cantidad: 0, unidad: "sacos", costo: 66.0, precio: 0 },
@@ -915,6 +820,7 @@
     let recetaActual = null, prodEditando = null, productoVentaSeleccionado = null, clienteAbonoActual = null;
     let ingredientesTemporales = [];
     let bcvRate = 0; // Tasa BCV
+    let sincronizando = false; // Variable para control de nube
 
     function esProductoFinal(nombre) {
       const n = nombre.toLowerCase();
@@ -931,31 +837,113 @@
       return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(monto || 0);
     }
 
-    function cargarDatos() {
-      const pGuardados = localStorage.getItem('almacen_fusion_productos_v7_esencias');
-      if (pGuardados) { productos = JSON.parse(pGuardados); } else { productos = [...PRODUCTOS_INICIALES]; }
-
-      const rGuardadas = localStorage.getItem('almacen_fusion_recetas_v7_esencias');
-      recetas = rGuardadas ? JSON.parse(rGuardadas) : [...RECETAS_PREDEF];
-
-      const vGuardadas = localStorage.getItem('almacen_fusion_ventas_v7_esencias');
-      ventas = vGuardadas ? JSON.parse(vGuardadas) : [];
-
-      const cGuardados = localStorage.getItem('almacen_fusion_clientes_v7_esencias');
-      clientes = cGuardados ? JSON.parse(cGuardados) : [];
-
-      const gGuardados = localStorage.getItem('almacen_fusion_gastos_v7_esencias');
-      gastos = gGuardados ? JSON.parse(gGuardados) : [];
+    // --- NUEVO SISTEMA DE SINCRONIZACIÓN (Local + Nube JSONB) --- //
+    
+    function cargarLocal() {
+      const p = localStorage.getItem('almacen_fusion_productos_v7_esencias'); if (p) productos = JSON.parse(p); else productos = [...PRODUCTOS_INICIALES];
+      const r = localStorage.getItem('almacen_fusion_recetas_v7_esencias'); if (r) recetas = JSON.parse(r); else recetas = [...RECETAS_PREDEF];
+      const v = localStorage.getItem('almacen_fusion_ventas_v7_esencias'); if (v) ventas = JSON.parse(v); else ventas = [];
+      const c = localStorage.getItem('almacen_fusion_clientes_v7_esencias'); if (c) clientes = JSON.parse(c); else clientes = [];
+      const g = localStorage.getItem('almacen_fusion_gastos_v7_esencias'); if (g) gastos = JSON.parse(g); else gastos = [];
     }
 
-    function guardarDatos() {
+    function guardarLocal() {
       localStorage.setItem('almacen_fusion_productos_v7_esencias', JSON.stringify(productos));
       localStorage.setItem('almacen_fusion_recetas_v7_esencias', JSON.stringify(recetas));
       localStorage.setItem('almacen_fusion_ventas_v7_esencias', JSON.stringify(ventas));
       localStorage.setItem('almacen_fusion_clientes_v7_esencias', JSON.stringify(clientes));
       localStorage.setItem('almacen_fusion_gastos_v7_esencias', JSON.stringify(gastos));
+    }
+
+    async function cargarDatos() {
+      const lblCarga = document.getElementById('lbl-carga'); 
+      const pantallaCarga = document.getElementById('pantalla-carga');
+      if(lblCarga) lblCarga.textContent = "Sincronizando con la nube...";
+      if(pantallaCarga) pantallaCarga.style.display = 'flex';
+      
+      try {
+        // 1. Cargar lo local primero para que la app abra rápido
+        cargarLocal();
+        
+        // 2. Traer la base de datos de Supabase
+        const { data, error } = await supabaseClient
+          .from('estado_almacen')
+          .select('datos')
+          .eq('id', 1)
+          .single();
+
+        if (error && error.code !== 'PGRST116') throw error; 
+
+        if (data && data.datos && Object.keys(data.datos).length > 0) {
+          // Inyectamos la información de la nube
+          productos = data.datos.productos || productos;
+          recetas   = data.datos.recetas || recetas;
+          ventas    = data.datos.ventas || ventas;
+          clientes  = data.datos.clientes || clientes;
+          gastos    = data.datos.gastos || gastos;
+          
+          guardarLocal(); // Actualizar memoria del teléfono
+          console.log("✅ Datos descargados de la nube.");
+          if(lblCarga) lblCarga.textContent = "✅ Conexión exitosa";
+        } else {
+           if(lblCarga) lblCarga.textContent = "✅ Listo (Sin datos previos)";
+        }
+      } catch (error) {
+        console.warn("⚠️ Sin conexión o error. Usando datos locales.", error);
+        if(lblCarga) {
+            lblCarga.textContent = '❌ Error, usando modo local';
+            lblCarga.style.color = '#ff3b30';
+        }
+      } finally {
+        setTimeout(() => {
+          if(pantallaCarga) pantallaCarga.style.display = 'none';
+        }, 1000);
+
+        // 🔥 ACTUALIZAMOS LA PANTALLA
+        renderizarProductos();
+        renderizarClientes();
+        llenarSelectorRecetas();
+        renderizarGastos();
+        renderizarFinanzas();
+        
+        if(recetas.length) { 
+          recetaActual = recetas[0]; 
+          const sel = document.getElementById('receta-select');
+          if(sel) sel.value = recetaActual.id;
+          actualizarVistaReceta(); 
+        }
+      }
+    }
+
+    async function guardarDatos() {
+      guardarLocal(); // Siempre guardar rápido en el celular
       renderizarFinanzas();
       renderizarGastos();
+      
+      if (!sincronizando) {
+        sincronizando = true;
+        try {
+          const estadoCompleto = {
+            productos: productos,
+            recetas: recetas,
+            ventas: ventas,
+            clientes: clientes,
+            gastos: gastos,
+            ultima_actualizacion: new Date().toISOString()
+          };
+          
+          const { error } = await supabaseClient
+            .from('estado_almacen')
+            .upsert({ id: 1, datos: estadoCompleto });
+            
+          if (error) throw error;
+          console.log("☁️ Nube de Supabase actualizada con éxito.");
+        } catch (e) {
+          console.error("⚠️ Falló la sincronización. Se reintentará en el próximo cambio.");
+        } finally {
+          sincronizando = false;
+        }
+      }
     }
 
     function encontrarProducto(nombre) {
@@ -982,16 +970,16 @@
       return cantidad; // Fallback
     }
 
-    function calcularCostoUnitario() {
+function calcularCostoUnitario() {
       if(!prodEditando || esProductoFinal(prodEditando.nombre)) return;
       const cantIngresada = parseFloat(document.getElementById('cantidad-ingreso').value) || 0;
       const totalPagado = parseFloat(document.getElementById('costo-total-producto').value) || 0;
       const unidadSel = document.getElementById('unidad-ingreso').value;
       
       if(cantIngresada > 0 && totalPagado > 0) {
-        const cantConvertida = convertirABase(cantIngresada, unidadSel, prodEditando.unidad, prodEditando.nombre);
-        const costoUnit = totalPagado / cantConvertida;
-        document.getElementById('lbl-costo-unitario-calculado').innerHTML = `💡 El nuevo costo por <strong>${prodEditando.unidad}</strong> será: <strong>${formatearDinero(costoUnit)}</strong>`;
+        // Ahora calcula directo sobre la nueva unidad elegida
+        const costoUnit = totalPagado / cantIngresada;
+        document.getElementById('lbl-costo-unitario-calculado').innerHTML = `💡 El nuevo costo por <strong>${unidadSel}</strong> será: <strong>${formatearDinero(costoUnit)}</strong>`;
       } else {
         document.getElementById('lbl-costo-unitario-calculado').innerHTML = `Costo actual registrado por <strong>${prodEditando.unidad}</strong>: <strong>${formatearDinero(prodEditando.costo)}</strong>`;
       }
@@ -1004,32 +992,52 @@
       document.getElementById('total-productos').textContent = `${productos.length} prod.`;
       
       document.getElementById('lista-productos').innerHTML = filtrados.map(prod => {
-        const cant = Number.isInteger(prod.cantidad) ? prod.cantidad : prod.cantidad.toFixed(2);
+        const cant = Number.isInteger(prod.cantidad) ? prod.cantidad : parseFloat(prod.cantidad.toFixed(3));
         let tagFinanciero = '';
+        let infoExtra = '';
         
-        let infoKilos = '';
+        // --- TEXTOS AZULES DE EQUIVALENCIA VISUAL ---
         if (prod.unidad && prod.unidad.toLowerCase().includes('saco')) {
             const kgPerSaco = prod.nombre.toLowerCase().includes('harina') ? 45 : 50;
             const totalKg = (cant * kgPerSaco).toFixed(2);
-            infoKilos = `<div style="font-size: 13px; color: #007aff; margin-top: 4px; font-weight: 600;">Equivale a: ${totalKg} kg disponibles</div>`;
+            infoExtra = `<div style="font-size: 13px; color: #007aff; margin-top: 4px; font-weight: 600;">Equivale a: ${totalKg} kg disponibles</div>`;
+        } 
+        else if (prod.unidad === 'kg' && cant > 0) {
+            const totalGramos = (cant * 1000).toFixed(0);
+            infoExtra = `<div style="font-size: 13px; color: #007aff; margin-top: 4px; font-weight: 600;">Equivale a: ${totalGramos} g / ml disponibles</div>`;
+        } 
+        else if (prod.unidad === 'L' && cant > 0) {
+            const totalMl = (cant * 1000).toFixed(0);
+            infoExtra = `<div style="font-size: 13px; color: #007aff; margin-top: 4px; font-weight: 600;">Equivale a: ${totalMl} ml disponibles</div>`;
+        } 
+        // 🔥 NUEVO: Si elegiste gramos o mililitros y superas los 1000, te muestra los Kilos/Litros
+        else if (prod.unidad === 'g' && cant >= 1000) {
+            const totalKg = (cant / 1000).toFixed(2);
+            infoExtra = `<div style="font-size: 13px; color: #007aff; margin-top: 4px; font-weight: 600;">Equivale a: ${totalKg} kg</div>`;
+        } 
+        else if (prod.unidad === 'ml' && cant >= 1000) {
+            const totalL = (cant / 1000).toFixed(2);
+            infoExtra = `<div style="font-size: 13px; color: #007aff; margin-top: 4px; font-weight: 600;">Equivale a: ${totalL} Litros</div>`;
         }
         
+        // Etiquetas de Finanzas...
         if (esProductoFinal(prod.nombre)) {
           tagFinanciero = `<span class="product-price">Venta Público: ${formatearDinero(prod.precio)}</span>`;
         } else {
-          let extraInfo = '';
+          let sacoDetalle = '';
           if (prod.unidad === 'sacos') {
             const kg = prod.nombre.toLowerCase().includes('harina') ? 45 : 50;
-            extraInfo = ` <span style="color:#c6c6c8; font-weight:400;">(${kg}kg c/u)</span>`;
+            sacoDetalle = ` <span style="color:#c6c6c8; font-weight:400;">(${kg}kg c/u)</span>`;
           }
-          tagFinanciero = `<span class="product-cost">Costo Inversión: ${formatearDinero(prod.costo)} / ${prod.unidad}${extraInfo}</span>`;
+          tagFinanciero = `<span class="product-cost">Costo Inversión: ${formatearDinero(prod.costo)} / ${prod.unidad}${sacoDetalle}</span>`;
         }
+
         return `
           <li class="product-item">
             <div class="product-info">
               <div class="product-name">${prod.nombre}</div>
               <div class="product-stock">${cant} <span class="product-unit">${prod.unidad}</span></div>
-              ${infoKilos}
+              ${infoExtra}
               ${tagFinanciero}
             </div>
             <div class="product-actions">
@@ -1074,28 +1082,43 @@
       document.getElementById('modal-ingreso').classList.remove('active');
     });
 
-    document.getElementById('guardar-ingreso').addEventListener('click', () => {
+document.getElementById('guardar-ingreso').addEventListener('click', () => {
       const cantIngresada = parseFloat(document.getElementById('cantidad-ingreso').value);
       const unidadSel = document.getElementById('unidad-ingreso').value;
       const accion = document.getElementById('accion-ingreso').value;
 
-      let cantConvertida = cantIngresada;
+      // 🔥 MAGIA: Si eliges una unidad nueva, el producto se adapta permanentemente a ella
+      if (unidadSel !== prodEditando.unidad) {
+         // Convertimos el stock viejo a la nueva unidad
+         prodEditando.cantidad = convertirABase(prodEditando.cantidad, prodEditando.unidad, unidadSel, prodEditando.nombre);
+         
+         // Convertimos el costo (ej. si era $5 por Kg, ahora será $0.005 por gramo)
+         if (prodEditando.costo > 0) {
+             const factorConversion = convertirABase(1, unidadSel, prodEditando.unidad, prodEditando.nombre);
+             prodEditando.costo = prodEditando.costo * factorConversion;
+         }
+         // Guardamos la nueva unidad elegida para que se vea en el inventario
+         prodEditando.unidad = unidadSel;
+      }
+
+      // Ahora aplicamos la suma o reemplazo directamente
       if (!isNaN(cantIngresada) && cantIngresada > 0) {
-        cantConvertida = convertirABase(cantIngresada, unidadSel, prodEditando.unidad, prodEditando.nombre);
-        if (accion === 'sumar') prodEditando.cantidad += cantConvertida;
-        else if (accion === 'reemplazar') prodEditando.cantidad = cantConvertida;
+        if (accion === 'sumar') prodEditando.cantidad += cantIngresada;
+        else if (accion === 'reemplazar') prodEditando.cantidad = cantIngresada;
         else if (accion === 'restar') {
-          if (prodEditando.cantidad >= cantConvertida) prodEditando.cantidad -= cantConvertida;
+          if (prodEditando.cantidad >= cantIngresada) prodEditando.cantidad -= cantIngresada;
           else { mostrarToast('Stock insuficiente para restar'); return; }
         }
       }
       
+      // Manejo de costos y precios
       if (esProductoFinal(prodEditando.nombre)) {
-        prodEditando.precio = parseFloat(document.getElementById('precio-producto').value) || 0;
+        const nuevoPrecio = parseFloat(document.getElementById('precio-producto').value);
+        if(!isNaN(nuevoPrecio)) prodEditando.precio = nuevoPrecio;
       } else {
         const totalPagado = parseFloat(document.getElementById('costo-total-producto').value);
-        if(!isNaN(totalPagado) && totalPagado > 0 && cantConvertida > 0) {
-           prodEditando.costo = totalPagado / cantConvertida; 
+        if(!isNaN(totalPagado) && totalPagado > 0 && !isNaN(cantIngresada) && cantIngresada > 0) {
+           prodEditando.costo = totalPagado / cantIngresada;
         }
       }
 
@@ -1263,17 +1286,11 @@
            });
        }
 
-       guardarDatos(); 
+       guardarDatos(); // ESTA FUNCIÓN AHORA SE ENCARGA DE GUARDAR LOCAL Y EN LA NUBE AL MISMO TIEMPO
        renderizarProductos(); 
        actualizarVistaReceta();
-       renderizarFinanzas();
-       renderizarGastos();
        
        mostrarToast('✅ ¡Producción completada y registrada!', 2500);
-
-       if (typeof sincronizarProduccionSupabase === 'function') {
-           sincronizarProduccionSupabase(recetaActual.id, cantidad, costoMO);
-       }
     });
 
     document.getElementById('convertir-sueltas').addEventListener('click', () => {
@@ -1385,7 +1402,6 @@
       
       recetas.push(nuevaReceta);
       guardarDatos();
-      if(typeof sincronizarRecetaSupabase === 'function') sincronizarRecetaSupabase(nuevaReceta);
       llenarSelectorRecetas();
       document.getElementById('receta-select').value = id;
       recetaActual = nuevaReceta;
@@ -1443,7 +1459,6 @@
 
     document.getElementById('btn-abrir-selector-venta').addEventListener('click', abrirSelectorVisual);
 
-    // Corrección de radio buttons (funciona en táctiles)
     document.querySelectorAll('.radio-option').forEach(opcion => {
       opcion.addEventListener('click', function(e) {
         document.querySelectorAll('.radio-option').forEach(el => el.classList.remove('selected'));
@@ -1460,7 +1475,6 @@
       });
     });
 
-    // Venta: iniciar
     document.getElementById('iniciar-venta').addEventListener('click', () => {
       if(!productoVentaSeleccionado) { mostrarToast('Selecciona un producto primero', 2000); return; }
       const cant = parseInt(document.getElementById('cantidad-venta').value);
@@ -1535,7 +1549,7 @@
       mostrarToast(tipo === 'contado' ? `✅ Venta al contado registrada` : `✅ Deuda asignada`, 3000);
     });
 
-    // ---------- LÓGICA DE CLIENTES (con abono en Bs) ----------
+    // ---------- LÓGICA DE CLIENTES ----------
     function renderizarClientes() {
       const lista = document.getElementById('lista-clientes');
       if(clientes.length === 0) {
@@ -1577,7 +1591,6 @@
        clienteAbonoActual = clientes.find(c => c.id === clienteId);
        document.getElementById('lbl-abono-cliente').textContent = clienteAbonoActual.nombre;
        document.getElementById('lbl-abono-deuda').textContent = formatearDinero(Math.round(clienteAbonoActual.deuda * 100) / 100);
-       // Mostrar equivalente en Bs de la deuda
        const deudaBs = (clienteAbonoActual.deuda * bcvRate).toFixed(2);
        document.getElementById('lbl-abono-deuda-bs').textContent = `(Bs. ${deudaBs})`;
        document.getElementById('input-monto-abono').value = '';
@@ -1614,7 +1627,7 @@
           cantidad: 1, ingreso: montoDolares, costo: 0, ganancia: montoDolares
        });
 
-       guardarDatos(); renderizarClientes(); renderizarFinanzas();
+       guardarDatos(); renderizarClientes(); 
        document.getElementById('modal-abono').classList.remove('active');
        mostrarToast(`✅ Abono de ${formatearDinero(montoDolares)} registrado (Bs. ${montoBs.toFixed(2)})`);
     });
@@ -1739,7 +1752,7 @@
       reader.readAsText(file);
     });
 
-    // Eventos de pestañas
+    // Eventos de pestañas e Inicialización Principal
     const tabs = document.querySelectorAll('.tab');
     const sections = document.querySelectorAll('.section');
     tabs.forEach(tab => tab.addEventListener('click', () => {
@@ -1752,25 +1765,12 @@
 
     document.getElementById('buscar-producto').addEventListener('input', e => renderizarProductos(e.target.value));
     
-    cargarDatos(); 
-    renderizarProductos();
-    renderizarClientes();
-    llenarSelectorRecetas();
-    renderizarGastos();
-    
     document.getElementById('receta-select').addEventListener('change', (e) => { 
       recetaActual = recetas.find(r => r.id === e.target.value); 
       actualizarVistaReceta(); 
     });
     
-    if(recetas.length) { 
-      recetaActual = recetas[0]; 
-      document.getElementById('receta-select').value = recetaActual.id;
-      actualizarVistaReceta(); 
-    }
-    
     document.getElementById('cantidad-produccion').addEventListener('input', actualizarVistaReceta);
-    renderizarFinanzas();
 
     // Obtener tasa BCV
     async function fetchBCVRate() {
@@ -1779,7 +1779,6 @@
         const data = await response.json();
         bcvRate = data.promedio;
         document.getElementById('bcv-rate').textContent = 'Bs. ' + bcvRate.toFixed(2);
-        // Si hay clientes abierto, actualizar los equivalentes
         if (document.getElementById('clientes').classList.contains('active')) {
           renderizarClientes();
         }
@@ -1789,8 +1788,12 @@
       }
     }
 
+    // Inicializaciones
     fetchBCVRate();
     setInterval(fetchBCVRate, 600000); // cada 10 minutos
+    
+    // CARGAMOS TODO DESDE LA NUBE Y LOCAL
+    cargarDatos();
 
   })();
 </script>
