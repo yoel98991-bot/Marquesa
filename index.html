@@ -205,6 +205,35 @@
       opacity: 0; transform: translateY(20px); transition: 0.3s; pointer-events: none; z-index: 3000;
     }
     .toast-message.show { opacity: 1; transform: translateY(0); }
+    
+    .sync-indicator {
+  cursor: default;
+  pointer-events: none;  /* no se puede tocar */
+  opacity: 0.7;
+  transition: color 0.3s, background 0.3s;
+}
+.sync-indicator.synced {
+  color: #34c759;            /* verde */
+  background: #e8f8f0;
+}
+.sync-indicator.syncing {
+  color: #ff9500;            /* naranja */
+  background: #fff3e0;
+  animation: pulse 1.5s infinite;
+}
+.sync-indicator.error {
+  color: #ff3b30;            /* rojo */
+  background: #ffeceb;
+}
+.sync-indicator.offline {
+  color: #8e8e93;            /* gris */
+  background: #f2f2f7;
+}
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
   </style>
 
   <!-- SUPABASE -->
@@ -230,10 +259,13 @@
   </div>
   <div class="app-header">
     <h1>Almacén <span style="font-weight: 400; color: #8e8e93;">Pro</span></h1>
-    <div class="header-actions">
-      <button class="icon-btn" id="btn-exportar" title="Guardar respaldo"><i class="fas fa-download"></i></button>
-      <button class="icon-btn" id="btn-importar" title="Restaurar respaldo"><i class="fas fa-upload"></i></button>
-    </div>
+<div class="header-actions">
+  <button class="icon-btn sync-indicator" id="btn-sync-status" title="Estado de sincronización" disabled>
+    <i class="fas fa-cloud"></i>
+  </button>
+  <button class="icon-btn" id="btn-exportar" title="Guardar respaldo"><i class="fas fa-download"></i></button>
+  <button class="icon-btn" id="btn-importar" title="Restaurar respaldo"><i class="fas fa-upload"></i></button>
+</div>
   </div>
 
   <input type="file" id="input-importar" accept=".json" style="display:none;">
@@ -541,25 +573,7 @@
   </div>
 
   
-  <div class="modal-overlay" id="modal-mano-obra">
-    <div class="modal-sheet">
-      <div class="modal-header">
-        <h2 class="modal-title">Costo Laboral Directo</h2>
-        <button class="close-modal" onclick="document.getElementById('modal-mano-obra').classList.remove('active')"><i class="fas fa-times"></i></button>
-      </div>
-      <p style="color:#8e8e93; font-size:14px; margin-bottom:16px;">¿Cuánto se le pagará al equipo (hornero, amasador, etc.) específicamente por producir esta tanda?</p>
-      
-      <div style="background: #f8f8fc; padding: 16px; border-radius: 16px; margin-bottom: 20px; text-align: center;">
-        <p style="font-size: 14px; color: #8e8e93;">Receta a producir</p>
-        <h3 id="lbl-mo-receta" style="font-size: 18px; color: #1c1c1e; margin-bottom: 8px;">Nombre</h3>
-      </div>
-
-      <label style="font-weight: 600; display: block; margin-bottom: 8px;">Monto a pagar (Se restará como Gasto Operativo):</label>
-      <input type="number" id="input-costo-mo" class="input-field" placeholder="Ej: 15.00" step="0.01" style="margin-bottom: 20px;" value="0">
-
-      <button class="btn" id="btn-confirmar-prod-final" style="background: #007aff;">Confirmar y Descontar</button>
-    </div>
-  </div>
+  
 
   <div id="toast" class="toast-message">Mensaje</div>
 </div>
@@ -818,8 +832,10 @@
     // Variables globales de la app
     let productos = [], recetas = [], ventas = [], clientes = [], gastos = [];
     let recetaActual = null, prodEditando = null, productoVentaSeleccionado = null, clienteAbonoActual = null;
+    let ultimaActualizacionLocal = null; // nueva variable
     let ingredientesTemporales = [];
     let bcvRate = 0; // Tasa BCV
+    let syncStatus = 'offline'; // 'offline', 'syncing', 'synced', 'error'
     let sincronizando = false; // Variable para control de nube
 
     function esProductoFinal(nombre) {
@@ -840,111 +856,200 @@
     // --- NUEVO SISTEMA DE SINCRONIZACIÓN (Local + Nube JSONB) --- //
     
     function cargarLocal() {
-      const p = localStorage.getItem('almacen_fusion_productos_v7_esencias'); if (p) productos = JSON.parse(p); else productos = [...PRODUCTOS_INICIALES];
-      const r = localStorage.getItem('almacen_fusion_recetas_v7_esencias'); if (r) recetas = JSON.parse(r); else recetas = [...RECETAS_PREDEF];
-      const v = localStorage.getItem('almacen_fusion_ventas_v7_esencias'); if (v) ventas = JSON.parse(v); else ventas = [];
-      const c = localStorage.getItem('almacen_fusion_clientes_v7_esencias'); if (c) clientes = JSON.parse(c); else clientes = [];
-      const g = localStorage.getItem('almacen_fusion_gastos_v7_esencias'); if (g) gastos = JSON.parse(g); else gastos = [];
-    }
+  const p = localStorage.getItem('almacen_fusion_productos_v7_esencias'); 
+  if (p) productos = JSON.parse(p); else productos = [...PRODUCTOS_INICIALES];
+  
+  const r = localStorage.getItem('almacen_fusion_recetas_v7_esencias'); 
+  if (r) recetas = JSON.parse(r); else recetas = [...RECETAS_PREDEF];
+  
+  const v = localStorage.getItem('almacen_fusion_ventas_v7_esencias'); 
+  if (v) ventas = JSON.parse(v); else ventas = [];
+  
+  const c = localStorage.getItem('almacen_fusion_clientes_v7_esencias'); 
+  if (c) clientes = JSON.parse(c); else clientes = [];
+  
+  const g = localStorage.getItem('almacen_fusion_gastos_v7_esencias'); 
+  if (g) gastos = JSON.parse(g); else gastos = [];
+  
+  // Lee la fecha de la última actualización local
+  ultimaActualizacionLocal = localStorage.getItem('almacen_ultima_actualizacion') || null;
+}
+
+function actualizarIndicadorSync(estado) {
+  syncStatus = estado;
+  const btn = document.getElementById('btn-sync-status');
+  if (!btn) return;
+  const icon = btn.querySelector('i');
+  btn.className = 'icon-btn sync-indicator ' + estado;
+  switch (estado) {
+    case 'synced':
+      icon.className = 'fas fa-cloud-upload-alt';
+      btn.title = 'Sincronizado';
+      break;
+    case 'syncing':
+      icon.className = 'fas fa-sync-alt fa-spin';
+      btn.title = 'Sincronizando...';
+      break;
+    case 'error':
+      icon.className = 'fas fa-cloud-upload-alt';
+      btn.title = 'Error de sincronización';
+      break;
+    case 'offline':
+    default:
+      icon.className = 'fas fa-cloud';
+      btn.title = 'Sin conexión';
+      break;
+  }
+}
 
     function guardarLocal() {
-      localStorage.setItem('almacen_fusion_productos_v7_esencias', JSON.stringify(productos));
-      localStorage.setItem('almacen_fusion_recetas_v7_esencias', JSON.stringify(recetas));
-      localStorage.setItem('almacen_fusion_ventas_v7_esencias', JSON.stringify(ventas));
-      localStorage.setItem('almacen_fusion_clientes_v7_esencias', JSON.stringify(clientes));
-      localStorage.setItem('almacen_fusion_gastos_v7_esencias', JSON.stringify(gastos));
-    }
+  localStorage.setItem('almacen_fusion_productos_v7_esencias', JSON.stringify(productos));
+  localStorage.setItem('almacen_fusion_recetas_v7_esencias', JSON.stringify(recetas));
+  localStorage.setItem('almacen_fusion_ventas_v7_esencias', JSON.stringify(ventas));
+  localStorage.setItem('almacen_fusion_clientes_v7_esencias', JSON.stringify(clientes));
+  localStorage.setItem('almacen_fusion_gastos_v7_esencias', JSON.stringify(gastos));
+
+  const ahora = new Date().toISOString();
+  localStorage.setItem('almacen_ultima_actualizacion', ahora);
+  ultimaActualizacionLocal = ahora;
+}
 
     async function cargarDatos() {
-      const lblCarga = document.getElementById('lbl-carga'); 
-      const pantallaCarga = document.getElementById('pantalla-carga');
-      if(lblCarga) lblCarga.textContent = "Sincronizando con la nube...";
-      if(pantallaCarga) pantallaCarga.style.display = 'flex';
-      
-      try {
-        // 1. Cargar lo local primero para que la app abra rápido
-        cargarLocal();
-        
-        // 2. Traer la base de datos de Supabase
-        const { data, error } = await supabaseClient
-          .from('estado_almacen')
-          .select('datos')
-          .eq('id', 1)
-          .single();
+  const lblCarga = document.getElementById('lbl-carga'); 
+  const pantallaCarga = document.getElementById('pantalla-carga');
+  if(lblCarga) lblCarga.textContent = "Sincronizando con la nube...";
+  if(pantallaCarga) pantallaCarga.style.display = 'flex';
+  
+  // 1️⃣ Al empezar la sincronización, icono naranja girando
+  actualizarIndicadorSync('syncing');
+  
+  try {
+    // 1. Cargar lo local primero
+    cargarLocal();
+    
+    // 2. Traer la base de datos de Supabase
+    const { data, error } = await supabaseClient
+      .from('estado_almacen')
+      .select('datos')
+      .eq('id', 1)
+      .single();
 
-        if (error && error.code !== 'PGRST116') throw error; 
+    if (error && error.code !== 'PGRST116') throw error; 
 
-        if (data && data.datos && Object.keys(data.datos).length > 0) {
-          // Inyectamos la información de la nube
-          productos = data.datos.productos || productos;
-          recetas   = data.datos.recetas || recetas;
-          ventas    = data.datos.ventas || ventas;
-          clientes  = data.datos.clientes || clientes;
-          gastos    = data.datos.gastos || gastos;
-          
-          guardarLocal(); // Actualizar memoria del teléfono
-          console.log("✅ Datos descargados de la nube.");
-          if(lblCarga) lblCarga.textContent = "✅ Conexión exitosa";
+    if (data && data.datos && Object.keys(data.datos).length > 0) {
+      const remoto = data.datos;
+      const fechaRemota = remoto.ultima_actualizacion;
+      const fechaLocal = ultimaActualizacionLocal;
+
+      if (fechaLocal && fechaRemota) {
+        const localEsMasNuevo = new Date(fechaLocal) > new Date(fechaRemota);
+        if (localEsMasNuevo) {
+          console.log("📤 Local es más nuevo. Subiendo datos...");
+          await guardarDatos();
+          if(lblCarga) lblCarga.textContent = "✅ Datos locales subidos";
+        } else if (new Date(fechaRemota) > new Date(fechaLocal)) {
+          console.log("📥 Nube más nueva. Descargando...");
+          productos = remoto.productos || productos;
+          recetas   = remoto.recetas || recetas;
+          ventas    = remoto.ventas || ventas;
+          clientes  = remoto.clientes || clientes;
+          gastos    = remoto.gastos || gastos;
+          ultimaActualizacionLocal = fechaRemota;
+          guardarLocal();
+          if(lblCarga) lblCarga.textContent = "✅ Datos de la nube aplicados";
         } else {
-           if(lblCarga) lblCarga.textContent = "✅ Listo (Sin datos previos)";
+          console.log("☁️ Todo está sincronizado.");
+          if(lblCarga) lblCarga.textContent = "✅ Sincronización OK";
         }
-      } catch (error) {
-        console.warn("⚠️ Sin conexión o error. Usando datos locales.", error);
-        if(lblCarga) {
-            lblCarga.textContent = '❌ Error, usando modo local';
-            lblCarga.style.color = '#ff3b30';
-        }
-      } finally {
-        setTimeout(() => {
-          if(pantallaCarga) pantallaCarga.style.display = 'none';
-        }, 1000);
-
-        // 🔥 ACTUALIZAMOS LA PANTALLA
-        renderizarProductos();
-        renderizarClientes();
-        llenarSelectorRecetas();
-        renderizarGastos();
-        renderizarFinanzas();
-        
-        if(recetas.length) { 
-          recetaActual = recetas[0]; 
-          const sel = document.getElementById('receta-select');
-          if(sel) sel.value = recetaActual.id;
-          actualizarVistaReceta(); 
-        }
+      } else if (!fechaLocal && fechaRemota) {
+        productos = remoto.productos || productos;
+        recetas   = remoto.recetas || recetas;
+        ventas    = remoto.ventas || ventas;
+        clientes  = remoto.clientes || clientes;
+        gastos    = remoto.gastos || gastos;
+        ultimaActualizacionLocal = fechaRemota;
+        guardarLocal();
+        if(lblCarga) lblCarga.textContent = "✅ Datos de la nube aplicados";
+      } else if (fechaLocal && !fechaRemota) {
+        await guardarDatos();
+        if(lblCarga) lblCarga.textContent = "✅ Datos locales subidos";
+      } else {
+        if(lblCarga) lblCarga.textContent = "✅ Listo (sin datos previos)";
       }
+      // 2️⃣ Después de todo el manejo de datos, si no hubo errores, icono verde
+      actualizarIndicadorSync('synced');
+    } else {
+       await guardarDatos();
+       if(lblCarga) lblCarga.textContent = "✅ Datos locales enviados a la nube";
+       // 3️⃣ También aquí marcamos sincronizado
+       actualizarIndicadorSync('synced');
     }
+  } catch (error) {
+    console.warn("⚠️ Sin conexión o error. Usando datos locales.", error);
+    if(lblCarga) {
+        lblCarga.textContent = '❌ Error, usando modo local';
+        lblCarga.style.color = '#ff3b30';
+    }
+    // 4️⃣ Si hubo error, icono rojo
+    actualizarIndicadorSync('error');
+  } finally {
+    setTimeout(() => {
+      if(pantallaCarga) pantallaCarga.style.display = 'none';
+    }, 1000);
+
+    // ACTUALIZAMOS LA PANTALLA
+    renderizarProductos();
+    renderizarClientes();
+    llenarSelectorRecetas();
+    renderizarGastos();
+    renderizarFinanzas();
+    
+    if(recetas.length) { 
+      recetaActual = recetas[0]; 
+      const sel = document.getElementById('receta-select');
+      if(sel) sel.value = recetaActual.id;
+      actualizarVistaReceta(); 
+    }
+  }
+}
 
     async function guardarDatos() {
-      guardarLocal(); // Siempre guardar rápido en el celular
-      renderizarFinanzas();
-      renderizarGastos();
-      
-      if (!sincronizando) {
-        sincronizando = true;
-        try {
-          const estadoCompleto = {
-            productos: productos,
-            recetas: recetas,
-            ventas: ventas,
-            clientes: clientes,
-            gastos: gastos,
-            ultima_actualizacion: new Date().toISOString()
-          };
-          
-          const { error } = await supabaseClient
-            .from('estado_almacen')
-            .upsert({ id: 1, datos: estadoCompleto });
-            
-          if (error) throw error;
-          console.log("☁️ Nube de Supabase actualizada con éxito.");
-        } catch (e) {
-          console.error("⚠️ Falló la sincronización. Se reintentará en el próximo cambio.");
-        } finally {
-          sincronizando = false;
-        }
-      }
+  guardarLocal();
+  renderizarFinanzas();
+  renderizarGastos();
+
+  if (!sincronizando) {
+    sincronizando = true;
+    actualizarIndicadorSync('syncing');
+    try {
+      const estadoCompleto = {
+        productos: productos,
+        recetas: recetas,
+        ventas: ventas,
+        clientes: clientes,
+        gastos: gastos,
+        ultima_actualizacion: ultimaActualizacionLocal
+      };
+
+      const { error } = await supabaseClient
+        .from('estado_almacen')
+        .upsert({ id: 1, datos: estadoCompleto });
+
+      if (error) throw error;
+      console.log("☁️ Nube de Supabase actualizada con éxito.");
+      actualizarIndicadorSync('synced');
+      // Después de 3 segundos, si sigue conectado, lo dejamos en synced
+      setTimeout(() => {
+        if (syncStatus === 'synced') actualizarIndicadorSync('synced');
+      }, 3000);
+    } catch (e) {
+      console.error("⚠️ Falló la sincronización.", e);
+      actualizarIndicadorSync('error');
+    } finally {
+      sincronizando = false;
     }
+  }
+}
 
     function encontrarProducto(nombre) {
       return productos.find(p => p.nombre.toLowerCase() === nombre.toLowerCase());
@@ -1209,89 +1314,89 @@ document.getElementById('guardar-ingreso').addEventListener('click', () => {
     }
 
     document.getElementById('ejecutar-produccion').addEventListener('click', () => {
-       if (!recetaActual) return;
-       const cantidad = parseFloat(document.getElementById('cantidad-produccion').value) || 1;
-       
-       for (let ing of recetaActual.ingredientes) {
-         const prod = encontrarProducto(ing.nombre);
-         if (!prod) { mostrarToast(`Producto "${ing.nombre}" no existe en inventario`, 2500); return; }
-         const reqConvertida = convertirABase(ing.cantidad * cantidad, ing.unidad, prod.unidad, ing.nombre);
-         if (prod.cantidad < reqConvertida) { 
-           mostrarToast(`Falta ${ing.nombre} (necesitas ${reqConvertida.toFixed(3)} ${prod.unidad} en stock)`, 3500); 
-           return; 
-         }
-       }
+  if (!recetaActual) return;
+  const cantidad = parseFloat(document.getElementById('cantidad-produccion').value) || 1;
+  
+  // Validación de ingredientes
+  for (let ing of recetaActual.ingredientes) {
+    const prod = encontrarProducto(ing.nombre);
+    if (!prod) { mostrarToast(`Producto "${ing.nombre}" no existe en inventario`, 2500); return; }
+    const reqConvertida = convertirABase(ing.cantidad * cantidad, ing.unidad, prod.unidad, ing.nombre);
+    if (prod.cantidad < reqConvertida) { 
+      mostrarToast(`Falta ${ing.nombre} (necesitas ${reqConvertida.toFixed(3)} ${prod.unidad} en stock)`, 3500); 
+      return; 
+    }
+  }
 
-       const totalUnidades = cantidad * recetaActual.unidadesPorProduccion;
-       let paquetes = 0;
-       if (recetaActual.productoResultante.tipo === 'compuesto') {
-         const up = recetaActual.productoResultante.paquete.unidadesPorPaquete;
-         paquetes = Math.floor(totalUnidades / up);
-         if (recetaActual.productoResultante.insumoEmpaque) {
-           const insumo = recetaActual.productoResultante.insumoEmpaque;
-           const prodIns = encontrarProducto(insumo.nombre);
-           if (!prodIns || prodIns.cantidad < paquetes) { mostrarToast(`Faltan bolsas: ${insumo.nombre} (necesitas ${paquetes})`, 2500); return; }
-         }
-       }
-       
-       document.getElementById('lbl-mo-receta').textContent = recetaActual.nombre;
-       document.getElementById('input-costo-mo').value = ''; 
-       document.getElementById('modal-mano-obra').classList.add('active');
-    });
+  const totalUnidades = cantidad * recetaActual.unidadesPorProduccion;
+  let paquetes = 0;
+  if (recetaActual.productoResultante.tipo === 'compuesto') {
+    const up = recetaActual.productoResultante.paquete.unidadesPorPaquete;
+    paquetes = Math.floor(totalUnidades / up);
+    if (recetaActual.productoResultante.insumoEmpaque) {
+      const insumo = recetaActual.productoResultante.insumoEmpaque;
+      const prodIns = encontrarProducto(insumo.nombre);
+      if (!prodIns || prodIns.cantidad < paquetes) { 
+        mostrarToast(`Faltan bolsas: ${insumo.nombre} (necesitas ${paquetes})`, 2500); 
+        return; 
+      }
+    }
+  }
+  
+  // --- EJECUTAR PRODUCCIÓN DIRECTAMENTE ---
+  const totalUnidadesProducidas = cantidad * recetaActual.unidadesPorProduccion;
+  let paquetesProducidos = 0, sueltasProducidas = totalUnidadesProducidas;
+  
+  if (recetaActual.productoResultante.tipo === 'compuesto') {
+    const up = recetaActual.productoResultante.paquete.unidadesPorPaquete;
+    paquetesProducidos = Math.floor(totalUnidadesProducidas / up);
+    sueltasProducidas = totalUnidadesProducidas % up;
+  }
 
-    document.getElementById('btn-confirmar-prod-final').addEventListener('click', () => {
-       if (!recetaActual) return;
-       document.getElementById('modal-mano-obra').classList.remove('active');
-       
-       const cantidad = parseFloat(document.getElementById('cantidad-produccion').value) || 1;
-       const totalUnidades = cantidad * recetaActual.unidadesPorProduccion;
-       const costoMO = parseFloat(document.getElementById('input-costo-mo').value) || 0;
-       
-       let paquetes = 0, sueltas = totalUnidades;
-       if (recetaActual.productoResultante.tipo === 'compuesto') {
-         const up = recetaActual.productoResultante.paquete.unidadesPorPaquete;
-         paquetes = Math.floor(totalUnidades / up);
-         sueltas = totalUnidades % up;
-       }
-       
-       for (let ing of recetaActual.ingredientes) {
-         const p = encontrarProducto(ing.nombre);
-         p.cantidad -= convertirABase(ing.cantidad * cantidad, ing.unidad, p.unidad, ing.nombre);
-       }
+  // Descontar ingredientes
+  for (let ing of recetaActual.ingredientes) {
+    const p = encontrarProducto(ing.nombre);
+    p.cantidad -= convertirABase(ing.cantidad * cantidad, ing.unidad, p.unidad, ing.nombre);
+  }
 
-       if (recetaActual.productoResultante.tipo === 'compuesto') {
-          if (recetaActual.productoResultante.insumoEmpaque) {
-            const b = encontrarProducto(recetaActual.productoResultante.insumoEmpaque.nombre);
-            b.cantidad -= paquetes;
-          }
-          let pPaq = encontrarProducto(recetaActual.productoResultante.paquete.nombre);
-          if(!pPaq) { pPaq={nombre: recetaActual.productoResultante.paquete.nombre, cantidad:0, unidad:'unidades', costo:0, precio:0}; productos.push(pPaq); }
-          pPaq.cantidad += paquetes;
-          
-          let pSuel = encontrarProducto(recetaActual.productoResultante.suelto.nombre);
-          if(!pSuel) { pSuel={nombre: recetaActual.productoResultante.suelto.nombre, cantidad:0, unidad:'unidades', costo:0, precio:0}; productos.push(pSuel); }
-          pSuel.cantidad += sueltas;
-       } else {
-          let pSuel = encontrarProducto(recetaActual.productoResultante.suelto.nombre);
-          if(!pSuel) { pSuel={nombre: recetaActual.productoResultante.suelto.nombre, cantidad:0, unidad:'unidades', costo:0, precio:0}; productos.push(pSuel); }
-          pSuel.cantidad += totalUnidades;
-       }
+  // Descontar bolsas si aplica
+  if (recetaActual.productoResultante.tipo === 'compuesto' && recetaActual.productoResultante.insumoEmpaque) {
+    const b = encontrarProducto(recetaActual.productoResultante.insumoEmpaque.nombre);
+    b.cantidad -= paquetesProducidos;
+  }
 
-       if (costoMO > 0) {
-           gastos.push({
-               id: Date.now().toString(),
-               descripcion: 'Mano de obra - ' + recetaActual.nombre,
-               monto: costoMO,
-               fecha: new Date().toISOString()
-           });
-       }
+  // Agregar productos resultantes
+  if (recetaActual.productoResultante.tipo === 'compuesto') {
+    let pPaq = encontrarProducto(recetaActual.productoResultante.paquete.nombre);
+    if (!pPaq) { 
+      pPaq = { nombre: recetaActual.productoResultante.paquete.nombre, cantidad: 0, unidad: 'unidades', costo: 0, precio: 0 };
+      productos.push(pPaq);
+    }
+    pPaq.cantidad += paquetesProducidos;
 
-       guardarDatos(); // ESTA FUNCIÓN AHORA SE ENCARGA DE GUARDAR LOCAL Y EN LA NUBE AL MISMO TIEMPO
-       renderizarProductos(); 
-       actualizarVistaReceta();
-       
-       mostrarToast('✅ ¡Producción completada y registrada!', 2500);
-    });
+    let pSuel = encontrarProducto(recetaActual.productoResultante.suelto.nombre);
+    if (!pSuel) { 
+      pSuel = { nombre: recetaActual.productoResultante.suelto.nombre, cantidad: 0, unidad: 'unidades', costo: 0, precio: 0 };
+      productos.push(pSuel);
+    }
+    pSuel.cantidad += sueltasProducidas;
+  } else {
+    let pSuel = encontrarProducto(recetaActual.productoResultante.suelto.nombre);
+    if (!pSuel) { 
+      pSuel = { nombre: recetaActual.productoResultante.suelto.nombre, cantidad: 0, unidad: 'unidades', costo: 0, precio: 0 };
+      productos.push(pSuel);
+    }
+    pSuel.cantidad += totalUnidadesProducidas;
+  }
+
+  guardarDatos();
+  renderizarProductos(); 
+  actualizarVistaReceta();
+  
+  mostrarToast('✅ ¡Producción completada!', 2500);
+});
+
+    
 
     document.getElementById('convertir-sueltas').addEventListener('click', () => {
         if (!recetaActual || recetaActual.productoResultante.tipo !== 'compuesto') return;
@@ -1794,6 +1899,23 @@ document.getElementById('guardar-ingreso').addEventListener('click', () => {
     
     // CARGAMOS TODO DESDE LA NUBE Y LOCAL
     cargarDatos();
+    
+    window.addEventListener('online', () => {
+  if (syncStatus === 'offline' || syncStatus === 'error') {
+    guardarDatos().catch(() => actualizarIndicadorSync('error'));
+  }
+});
+
+window.addEventListener('offline', () => {
+  actualizarIndicadorSync('offline');
+});
+
+// Estado inicial
+if (!navigator.onLine) {
+  actualizarIndicadorSync('offline');
+} else {
+  actualizarIndicadorSync('syncing');
+}
 
   })();
 </script>
