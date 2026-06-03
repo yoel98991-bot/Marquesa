@@ -470,8 +470,8 @@
           <label style="font-weight:600; display:block; margin-bottom:4px; font-size:14px; color:#1c1c1e;">
             Precio por unidad (USD)
           </label>
-          <input type="number" id="input-precio-venta-modal" class="input-field" step="0.01" min="0.01" value="0"
-                 oninput="actualizarTotalVentaModal()">
+         <input type="number" id="input-precio-venta-modal" class="input-field" step="0.01" min="0.01" value="0"
+       oninput="actualizarTotalVentaModal()">
         </div>
         <h1 style="font-size: 40px; color:#1c1c1e; margin-top:4px;" id="lbl-total-venta-modal">$0.00</h1>
       </div>
@@ -1590,12 +1590,44 @@
     });
 
     function actualizarTotalVentaModal() {
-      const cantidad = parseInt(document.getElementById('cantidad-venta').value) || 0;
-      const precioUnit = parseFloat(document.getElementById('input-precio-venta-modal').value) || 0;
-      const total = cantidad * precioUnit;
-      document.getElementById('lbl-total-venta-modal').textContent = formatearDinero(total);
-    }
+  const cantidad = parseInt(document.getElementById('cantidad-venta').value) || 0;
+  const precioUnit = parseFloat(document.getElementById('input-precio-venta-modal').value) || 0;
+  const nuevoTotal = cantidad * precioUnit;
+  const lbl = document.getElementById('lbl-total-venta-modal');
 
+  // Obtener valor numérico actual del texto (quita el símbolo $ y comas)
+  const textoActual = lbl.textContent.replace(/[^0-9.-]+/g, '');
+  const totalActual = parseFloat(textoActual) || 0;
+
+  // Si no hay diferencia, asignar directamente
+  if (totalActual === nuevoTotal) {
+    lbl.textContent = formatearDinero(nuevoTotal);
+    return;
+  }
+
+  // Animación de conteo
+  const duracion = 400; // milisegundos
+  const inicio = performance.now();
+
+  function animar(ahora) {
+    const transcurrido = ahora - inicio;
+    const progreso = Math.min(transcurrido / duracion, 1);
+    // Easing suave (ease-out)
+    const eased = 1 - Math.pow(1 - progreso, 3);
+    const valorActual = totalActual + (nuevoTotal - totalActual) * eased;
+    lbl.textContent = formatearDinero(valorActual);
+
+    if (progreso < 1) {
+      requestAnimationFrame(animar);
+    } else {
+      lbl.textContent = formatearDinero(nuevoTotal);
+    }
+  }
+
+  requestAnimationFrame(animar);
+}
+window.actualizarTotalVentaModal = actualizarTotalVentaModal;
+    
     // Radio buttons
     document.querySelectorAll('.radio-option').forEach(opcion => {
       opcion.addEventListener('click', function(e) {
