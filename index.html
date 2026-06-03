@@ -1158,6 +1158,7 @@
       guardarDatos();
       renderizarProductos(document.getElementById('buscar-producto').value);
     }
+window.ajusteRapido = ajusteRapido;
 
     function actualizarSelectorBolsasReceta() {
       const bolsas = productos.filter(p => p.nombre.toLowerCase().includes('bolsa'));
