@@ -1055,11 +1055,15 @@
         let tagFinanciero = '';
         let infoExtra = '';
         let stockWarning = '';
+
+        // Alerta de stock bajo
         if (!esProductoFinal(prod.nombre)) {
           if ((prod.unidad === 'sacos' && cant < 0.5) || (prod.unidad === 'kg' && cant < 5) || (prod.unidad === 'g' && cant < 500) || (prod.unidad === 'L' && cant < 2)) {
             stockWarning = '<span class="badge-warning">Bajo</span>';
           }
         }
+
+        // Información extra de equivalencias
         if (prod.unidad && prod.unidad.toLowerCase().includes('saco')) {
             const kgPerSaco = prod.nombre.toLowerCase().includes('harina') ? 45 : 50;
             const totalKg = (cant * kgPerSaco).toFixed(2);
@@ -1077,6 +1081,8 @@
             const totalL = (cant / 1000).toFixed(2);
             infoExtra = `<div style="font-size: 13px; color: #007aff; margin-top: 4px; font-weight: 600;">Equivale a: ${totalL} Litros</div>`;
         }
+
+        // Tag financiero (SOLO UN BLOQUE)
         if (esProductoFinal(prod.nombre)) {
           tagFinanciero = `<span class="product-price">Venta Público: ${formatearDinero(prod.precio)}</span>`;
         } else {
@@ -1085,8 +1091,10 @@
             const kg = prod.nombre.toLowerCase().includes('harina') ? 45 : 50;
             sacoDetalle = ` <span style="color:#c6c6c8; font-weight:400;">(${kg}kg c/u)</span>`;
           }
-          tagFinanciero = `<span class="product-cost">Costo Inversión: ${formatearDinero(prod.costo)} / ${prod.unidad}${sacoDetalle}</span>`;
+          const costoTotalStock = prod.cantidad * prod.costo;
+          tagFinanciero = `<span class="product-cost">Total invertido: ${formatearDinero(costoTotalStock)} &nbsp;<small style="font-weight:400;">( ${formatearDinero(prod.costo)} / ${prod.unidad}${sacoDetalle} )</small></span>`;
         }
+
         return `
           <li class="product-item">
             <div class="product-info">
@@ -1106,12 +1114,30 @@
     }
 
     window.ajusteRapido = function(nombre, delta) {
-      const prod = encontrarProducto(nombre);
-      if (!prod) return;
-      prod.cantidad = Math.max(0, prod.cantidad + delta);
-      guardarDatos();
-      renderizarProductos(document.getElementById('buscar-producto').value);
-    };
+  const prod = encontrarProducto(nombre);
+  if (!prod) return;
+
+  // Si estamos sumando (+) y es materia prima (no producto final)
+  if (delta > 0 && !esProductoFinal(prod.nombre)) {
+    const costoTotalCompra = delta * prod.costo;
+    compras.push({
+      id: Date.now() + Math.random(),
+      fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
+      producto: prod.nombre,
+      cantidad: delta,
+      unidad: prod.unidad,
+      costoUnitario: prod.costo,
+      total: costoTotalCompra
+    });
+  }
+
+  prod.cantidad = Math.max(0, prod.cantidad + delta);
+  
+  // Guardar y actualizar la interfaz
+  guardarDatos();
+  renderizarProductos(document.getElementById('buscar-producto').value);
+};
+
 
     function actualizarSelectorBolsasReceta() {
       const bolsas = productos.filter(p => p.nombre.toLowerCase().includes('bolsa'));
@@ -1221,18 +1247,22 @@
       }
 
       if (cantidadComprada > 0 && !esProductoFinal(prodEditando.nombre)) {
-        const costoUnitarioActual = prodEditando.costo;
-        const totalCompra = cantidadComprada * costoUnitarioActual;
-        compras.push({
-          id: Date.now() + Math.random(),
-          fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
-          producto: prodEditando.nombre,
-          cantidad: cantidadComprada,
-          unidad: prodEditando.unidad,
-          costoUnitario: costoUnitarioActual,
-          total: totalCompra
-        });
-      }
+  const costoUnitarioActual = prodEditando.costo;
+  const totalCompra = cantidadComprada * costoUnitarioActual;
+  compras.push({
+    id: Date.now() + Math.random(),
+    fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
+    producto: prodEditando.nombre,
+    cantidad: cantidadComprada,
+    unidad: prodEditando.unidad,
+    costoUnitario: costoUnitarioActual,
+    total: totalCompra
+  });
+  // 👇 Agrega esto
+  if (document.getElementById('finanzas').classList.contains('active')) {
+    renderizarFinanzas();
+  }
+}
 
       guardarDatos();
       renderizarProductos(document.getElementById('buscar-producto').value);
@@ -1252,6 +1282,7 @@
       calcularCostoUnitario();
       actualizarTotalCompraEstimado();
     });
+    document.getElementById('cantidad-ingreso').addEventListener('focus', actualizarTotalCompraEstimado);
 
     // ---------- PRODUCCIÓN ----------
     function actualizarVistaReceta() {
@@ -1927,34 +1958,49 @@
 
     // ---------- FINANZAS ----------
     function renderizarFinanzas() {
-      let totalIngresos = 0, totalCostos = 0, totalGanancia = 0;
-      const listaVentas = document.getElementById('lista-ventas');
-      listaVentas.innerHTML = ventas.length === 0 ? '<div style="text-align:center; padding:20px; color:#8e8e93;">No hay ventas ni abonos registrados aún</div>' : '';
-      ventas.forEach(v => {
-        totalIngresos += v.ingreso; totalCostos += v.costo; totalGanancia += v.ganancia;
-        let colorMonto = v.ingreso > 0 ? '#34c759' : '#8e8e93';
-        listaVentas.innerHTML += `
-          <div class="venta-item">
-            <div class="venta-info">
-              <h4>${v.cantidad}x ${v.producto}</h4>
-              <p>${v.fecha}</p>
-            </div>
-            <div class="venta-monto" style="color: ${colorMonto}">${v.ingreso > 0 ? '+'+formatearDinero(v.ingreso) : 'Fiado'}</div>
-          </div>`;
-      });
-      const totalPorCobrar = clientes.reduce((acc, cli) => acc + cli.deuda, 0);
-      const totalGastos = gastos.reduce((acc, g) => acc + g.monto, 0);
-      const totalCompras = compras.reduce((acc, c) => acc + c.total, 0);
-      document.getElementById('fin-ingresos').textContent = formatearDinero(totalIngresos);
-      document.getElementById('fin-costos').textContent = formatearDinero(totalCostos);
-      document.getElementById('fin-por-cobrar').textContent = formatearDinero(totalPorCobrar);
-      document.getElementById('fin-gastos').textContent = formatearDinero(totalGastos);
-      document.getElementById('fin-compras').textContent = formatearDinero(totalCompras);
-      let gananciaNeta = totalGanancia - totalGastos - totalCompras;
-      const finGanancia = document.getElementById('fin-ganancia');
-      finGanancia.textContent = formatearDinero(gananciaNeta);
-      finGanancia.style.color = gananciaNeta >= 0 ? '#34c759' : '#ff3b30';
-    }
+  let totalIngresos = 0, totalCostos = 0, totalGanancia = 0;
+  const listaVentas = document.getElementById('lista-ventas');
+  if (ventas.length === 0) {
+    listaVentas.innerHTML = '<div style="text-align:center; padding:20px; color:#8e8e93;">No hay ventas ni abonos registrados aún</div>';
+  } else {
+    listaVentas.innerHTML = '';
+  }
+  ventas.forEach(v => {
+    totalIngresos += v.ingreso || 0;
+    totalCostos += v.costo || 0;
+    totalGanancia += v.ganancia || 0;
+    const colorMonto = v.ingreso > 0 ? '#34c759' : '#8e8e93';
+    listaVentas.innerHTML += `
+      <div class="venta-item">
+        <div class="venta-info">
+          <h4>${v.cantidad}x ${v.producto}</h4>
+          <p>${v.fecha}</p>
+        </div>
+        <div class="venta-monto" style="color: ${colorMonto}">${v.ingreso > 0 ? '+'+formatearDinero(v.ingreso) : 'Fiado'}</div>
+      </div>`;
+  });
+  const totalPorCobrar = clientes.reduce((acc, cli) => acc + (cli.deuda || 0), 0);
+  const totalGastos = gastos.reduce((acc, g) => acc + (g.monto || 0), 0);
+  const totalCompras = compras.reduce((acc, c) => acc + (c.total || 0), 0);
+
+  setTextSafe('fin-ingresos', totalIngresos);
+  setTextSafe('fin-costos', totalCostos);
+  setTextSafe('fin-por-cobrar', totalPorCobrar);
+  setTextSafe('fin-gastos', totalGastos);
+  setTextSafe('fin-compras', totalCompras);
+
+  const gananciaNeta = totalGanancia - totalGastos - totalCompras;
+  const finGanancia = document.getElementById('fin-ganancia');
+  if (finGanancia) {
+    finGanancia.textContent = formatearDinero(gananciaNeta);
+    finGanancia.style.color = gananciaNeta >= 0 ? '#34c759' : '#ff3b30';
+  }
+
+  function setTextSafe(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = formatearDinero(value);
+  }
+}
 
     function renderizarGastos() {
       const lista = document.getElementById('lista-gastos');
