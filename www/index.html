@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Almacén · Finanzas y Fórmulas</title>
   
-  <!-- PWA Meta Tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Almacén Pro">
@@ -198,7 +197,6 @@
     }
   </style>
 
-  <!-- SUPABASE -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -233,7 +231,6 @@
 
   <input type="file" id="input-importar" accept=".json" style="display:none;">
 
-  <!-- Secciones -->
   <section id="inventario" class="section active">
     <div class="card">
       <div class="card-header">
@@ -313,6 +310,21 @@
     </div>
   </section>
 
+  <section id="empleados" class="section">
+    <div class="card">
+      <div class="card-header">
+        <h3>Equipo de Trabajo</h3>
+        <div style="display: flex; gap: 8px;">
+          <button class="icon-btn" onclick="abrirModalEmpleado()" style="background: #3E2723; color: white; width: 36px; height: 36px;" title="Nuevo empleado">
+            <i class="fas fa-user-plus"></i>
+          </button>
+        </div>
+      </div>
+      <p style="font-size: 13px; color: #8e8e93; margin-bottom: 16px;">Administra tu personal y registra los pagos de nómina directamente a los gastos operativos.</p>
+      <ul class="product-list" id="lista-empleados"></ul>
+    </div>
+  </section>
+
   <section id="finanzas" class="section">
     <div class="finanzas-dashboard">
       <div class="dash-card">
@@ -347,11 +359,11 @@
 
     <div class="card">
       <div class="card-header">
-        <h3>Gastos Operativos (Sueldos)</h3>
+        <h3>Gastos Operativos</h3>
       </div>
-      <p style="font-size: 13px; color: #8e8e93; margin-bottom: 12px;">Registra sueldos o gastos extra.</p>
+      <p style="font-size: 13px; color: #8e8e93; margin-bottom: 12px;">Registra cualquier gasto extra.</p>
       <div class="flex-row" style="margin-bottom: 12px;">
-        <input type="text" id="input-desc-gasto" placeholder="Ej. Sueldo Pedro" class="input-field" style="flex: 2;">
+        <input type="text" id="input-desc-gasto" placeholder="Ej. Transporte" class="input-field" style="flex: 2;">
         <input type="number" id="input-monto-gasto" placeholder="Monto" class="input-field" style="flex: 1;" step="0.01" min="0">
       </div>
       <button class="btn" id="btn-guardar-gasto" style="background: #ff9500; margin-bottom: 16px;"><i class="fas fa-plus"></i> Registrar Gasto</button>
@@ -367,7 +379,6 @@
     </div>
   </section>
 
-  <!-- Modales (no se modifican, se mantienen igual) -->
   <div class="modal-overlay" id="modal-receta">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -379,7 +390,6 @@
         <div class="flex-row" style="margin-bottom: 12px;">
           <input type="text" id="receta-unidad" placeholder="ej. kg de harina, bandejas, litros…" class="input-field" value="latas">
         </div>
-        <!-- NUEVOS CAMPOS: unidades por lata y latas base -->
         <div style="margin-bottom: 12px;">
           <div class="flex-row" style="margin-bottom: 8px;">
             <label style="font-weight: 500;">Unidades por lata/bandeja:</label>
@@ -457,7 +467,6 @@
     </div>
   </div>
 
-  <!-- Modal de Abono -->
   <div class="modal-overlay" id="modal-abono">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -524,7 +533,6 @@
             Total estimado de la compra: <span id="lbl-total-compra">$0.00</span>
           </div>
 
-          <!-- NUEVO: Opción de precio por paquete -->
           <div style="margin-top:12px; border-top:1px solid #ffe8cc; padding-top:12px;">
             <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#8e8e93; cursor:pointer;">
               <input type="checkbox" id="usar-paquete-costo" style="width:18px; height:18px; accent-color:#007aff;">
@@ -542,8 +550,6 @@
               <p id="lbl-costo-unitario-paquete" style="font-size:12px; color:#007aff; margin-top:6px; font-weight:600;"></p>
             </div>
           </div>
-          <!-- FIN NUEVO -->
-
         </div>
 
         <div id="zona-precio" style="background: #f0fdf4; padding: 16px; border-radius: 16px; margin-bottom: 16px; border: 1px solid #bbf7d0; display: none;">
@@ -565,7 +571,6 @@
     </div>
   </div>
 
-  <!-- Modal selector de cliente -->
   <div class="modal-overlay" id="modal-selector-cliente">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -582,7 +587,6 @@
     </div>
   </div>
 
-  <!-- Modal historial cliente -->
   <div class="modal-overlay" id="modal-historial-cliente">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -592,10 +596,31 @@
       <ul class="product-list" id="lista-historial-cliente"></ul>
     </div>
   </div>
+  
+  <div class="modal-overlay" id="modal-empleado">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h2 class="modal-title" id="titulo-modal-empleado">Nuevo Empleado</h2>
+        <button class="close-modal" onclick="document.getElementById('modal-empleado').classList.remove('active')"><i class="fas fa-times"></i></button>
+      </div>
+      <div id="form-empleado">
+        <input type="hidden" id="empleado-id">
+        <label style="font-weight: 600; display:block; margin-bottom:8px;">Nombre Completo:</label>
+        <input type="text" id="empleado-nombre" placeholder="Ej. Ana Pérez" class="input-field" style="margin-bottom: 16px;">
+        
+        <label style="font-weight: 600; display:block; margin-bottom:8px;">Cargo / Rol:</label>
+        <input type="text" id="empleado-cargo" placeholder="Ej. Ayudante de cocina" class="input-field" style="margin-bottom: 16px;">
+        
+        <label style="font-weight: 600; display:block; margin-bottom:8px;">Sueldo a pagar ($):</label>
+        <input type="number" id="empleado-sueldo" placeholder="Ej. 40.00" class="input-field" step="0.01" min="0" style="margin-bottom: 24px;">
+        
+        <button class="btn" id="btn-guardar-empleado" style="background: #5D4037;"><i class="fas fa-save"></i> Guardar Datos</button>
+      </div>
+    </div>
+  </div>
 
   <div id="toast" class="toast-message">Mensaje</div>
 
-  <!-- Navegación inferior -->
   <nav class="bottom-nav">
     <button class="nav-item active" data-tab="inventario">
       <i class="fas fa-box"></i>
@@ -613,6 +638,10 @@
       <i class="fas fa-users"></i>
       <span>Clientes</span>
     </button>
+    <button class="nav-item" data-tab="empleados">
+      <i class="fas fa-id-badge"></i>
+      <span>Equipo</span>
+    </button>
     <button class="nav-item" data-tab="finanzas">
       <i class="fas fa-chart-line"></i>
       <span>Finanzas</span>
@@ -621,9 +650,6 @@
 </div>
 
 <script>
-  // ==========================================
-  // CONFIGURACIÓN DE SUPABASE (LA NUBE)
-  // ==========================================
   const supabaseUrl = 'https://sgftomrbxvroqcgiobcc.supabase.co';
   const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnZnRvbXJieHZyb3FjZ2lvYmNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNTkyNzcsImV4cCI6MjA5NTczNTI3N30.DF5LXMGVrNtJq4lsoCPzLBOM8hJmq5JzRYMUKykJvIU';
   const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
@@ -639,7 +665,6 @@
   (function(){
     "use strict";
 
-    // Productos iniciales (añadir propiedad paqueteCantidad a cada uno, por defecto 0)
     const PRODUCTOS_INICIALES = [
       { nombre: "Harina", cantidad: 0, unidad: "sacos", costo: 38.5, precio: 0, paqueteCantidad: 0 },
       { nombre: "Azúcar", cantidad: 0, unidad: "sacos", costo: 66.0, precio: 0, paqueteCantidad: 0 },
@@ -690,7 +715,6 @@
 
     const UNIDADES_PERMITIDAS = ['sacos', 'kg', 'g', 'L', 'ml', 'unidades'];
 
-    // Recetas predefinidas adaptadas a la nueva estructura (latas base y unidades por lata)
     const RECETAS_PREDEF = [
       { 
         id: 'catalinas', nombre: 'Catalinas', unidadProduccion: 'bandejas',
@@ -883,8 +907,7 @@
       }
     ];
 
-    // Variables globales (añadido producciones)
-    let productos = [], recetas = [], ventas = [], clientes = [], gastos = [], compras = [], producciones = [];
+    let productos = [], recetas = [], ventas = [], clientes = [], gastos = [], compras = [], producciones = [], empleados = [];
     let recetaActual = null, prodEditando = null, productoVentaSeleccionado = null, clienteAbonoActual = null;
     let ultimaActualizacionLocal = null;
     let ingredientesTemporales = [];
@@ -945,7 +968,6 @@
       return productos.find(p => p.nombre.toLowerCase() === nombre.toLowerCase());
     }
 
-    // Persistencia local y remota
     function cargarLocal() {
       const p = localStorage.getItem('almacen_fusion_productos_v7_esencias'); 
       if (p) productos = JSON.parse(p); else productos = [...PRODUCTOS_INICIALES];
@@ -968,6 +990,8 @@
       if (com) compras = JSON.parse(com); else compras = [];
       const prod = localStorage.getItem('almacen_fusion_producciones_v7_esencias');
       if (prod) producciones = JSON.parse(prod); else producciones = [];
+      const emp = localStorage.getItem('almacen_fusion_empleados_v7');
+      if (emp) empleados = JSON.parse(emp); else empleados = [];
       ultimaActualizacionLocal = localStorage.getItem('almacen_ultima_actualizacion') || null;
     }
 
@@ -979,6 +1003,7 @@
       localStorage.setItem('almacen_fusion_gastos_v7_esencias', JSON.stringify(gastos));
       localStorage.setItem('almacen_fusion_compras_v7_esencias', JSON.stringify(compras));
       localStorage.setItem('almacen_fusion_producciones_v7_esencias', JSON.stringify(producciones));
+      localStorage.setItem('almacen_fusion_empleados_v7', JSON.stringify(empleados));
       const ahora = new Date().toISOString();
       localStorage.setItem('almacen_ultima_actualizacion', ahora);
       ultimaActualizacionLocal = ahora;
@@ -993,7 +1018,7 @@
         actualizarIndicadorSync('syncing');
         try {
           const estadoCompleto = {
-            productos, recetas, ventas, clientes, gastos, compras, producciones,
+            productos, recetas, ventas, clientes, gastos, compras, producciones, empleados,
             ultima_actualizacion: ultimaActualizacionLocal
           };
           const { error } = await supabaseClient
@@ -1052,6 +1077,7 @@
               gastos    = remoto.gastos || gastos;
               compras   = remoto.compras || compras;
               producciones = remoto.producciones || producciones;
+              empleados = remoto.empleados || empleados;
               ultimaActualizacionLocal = fechaRemota;
               guardarLocal();
               if(lblCarga) lblCarga.textContent = "✅ Datos de la nube aplicados";
@@ -1067,6 +1093,7 @@
             gastos    = remoto.gastos || gastos;
             compras   = remoto.compras || compras;
             producciones = remoto.producciones || producciones;
+            empleados = remoto.empleados || empleados;
             ultimaActualizacionLocal = fechaRemota;
             guardarLocal();
             if(lblCarga) lblCarga.textContent = "✅ Datos de la nube aplicados";
@@ -1105,6 +1132,7 @@
         renderizarProductos();
         renderizarGridVentas();
         renderizarClientes();
+        renderizarEmpleados();
         llenarSelectorRecetas();
         renderizarGastos();
         renderizarFinanzas();
@@ -1454,7 +1482,7 @@
         }
       }
       let paquetes = 0;
-      let costoProduccion = 0; // acumular costo de la producción
+      let costoProduccion = 0; 
       for (let ing of recetaActual.ingredientes) {
         const p = encontrarProducto(ing.nombre);
         const cantidadNecesaria = ing.cantidad * factorEscala;
@@ -1496,7 +1524,6 @@
         pSuel.cantidad += totalUnidades;
       }
       
-      // Registrar la producción
       producciones.push({
         id: Date.now(),
         fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
@@ -2017,7 +2044,6 @@
     });
 
     // ---------- FINANZAS ----------
-    
     function renderizarFinanzas() {
       let totalIngresos = 0, totalCostos = 0, totalGanancia = 0;
       const listaVentas = document.getElementById('lista-ventas');
@@ -2047,10 +2073,8 @@
       const totalGastos = gastos.reduce((acc, g) => acc + (g.monto || 0), 0);
       const totalProducciones = producciones.reduce((acc, p) => acc + (p.costo || 0), 0);
 
-      // NUEVO CÁLCULO DE CAPITAL: Basado exclusivamente en el inventario físico real
       let capitalNeto = 0;
       productos.forEach(p => {
-        // Solo sumamos la materia prima (ignoramos productos finales) y evitamos cantidades negativas
         if (!esProductoFinal(p.nombre) && p.cantidad > 0) {
           capitalNeto += p.cantidad * p.costo;
         }
@@ -2060,10 +2084,9 @@
       setTextSafe('fin-costos', totalCostos);
       setTextSafe('fin-por-cobrar', totalPorCobrar);
       setTextSafe('fin-gastos', totalGastos);
-      setTextSafe('fin-compras', capitalNeto); // Actualiza la tarjeta de Capital con el valor real
+      setTextSafe('fin-compras', capitalNeto);
       setTextSafe('fin-produccion', totalProducciones);
 
-      // NUEVO CÁLCULO DE GANANCIA NETA: Ya no restamos la producción aquí para evitar el doble descuento
       const gananciaNeta = totalGanancia - totalGastos; 
       
       const finGanancia = document.getElementById('fin-ganancia');
@@ -2077,8 +2100,6 @@
         if (el) el.textContent = formatearDinero(value);
       }
     }
-    
-    
 
     function renderizarGastos() {
       const lista = document.getElementById('lista-gastos');
@@ -2142,7 +2163,7 @@
     });
 
     function exportarDatos() {
-      const datos = { productos, recetas, ventas, clientes, gastos, compras, producciones };
+      const datos = { productos, recetas, ventas, clientes, gastos, compras, producciones, empleados };
       const blob = new Blob([JSON.stringify(datos, null, 2)], {type: 'application/json'});
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -2175,6 +2196,7 @@
             localStorage.setItem('almacen_fusion_gastos_v7_esencias', JSON.stringify(datos.gastos));
             localStorage.setItem('almacen_fusion_compras_v7_esencias', JSON.stringify(datos.compras));
             localStorage.setItem('almacen_fusion_producciones_v7_esencias', JSON.stringify(datos.producciones));
+            if(datos.empleados) localStorage.setItem('almacen_fusion_empleados_v7', JSON.stringify(datos.empleados));
             mostrarToast('✅ Datos restaurados. Recargando...', 1500);
             setTimeout(() => location.reload(), 1200);
           } else {
@@ -2198,6 +2220,7 @@
         if (target === 'ventas') renderizarGridVentas();
         if (target === 'clientes') renderizarClientes();
         if (target === 'finanzas') { renderizarFinanzas(); renderizarGastos(); }
+        if (target === 'empleados') renderizarEmpleados();
       });
     });
 
@@ -2279,6 +2302,119 @@
 
     document.getElementById('paquete-precio').addEventListener('input', calcularCostoDesdePaquete);
     document.getElementById('paquete-cantidad').addEventListener('input', calcularCostoDesdePaquete);
+
+    // ---------- EMPLEADOS ----------
+    function renderizarEmpleados() {
+      const lista = document.getElementById('lista-empleados');
+      if(empleados.length === 0) {
+        lista.innerHTML = '<p style="text-align:center; padding: 20px; color:#8e8e93;">No hay empleados registrados.</p>';
+        return;
+      }
+      
+      lista.innerHTML = empleados.map(emp => `
+        <li class="product-item">
+          <div class="product-info" onclick="abrirModalEmpleado(${emp.id})">
+            <div class="product-name" style="font-size:16px;">
+              <i class="fas fa-user-tie" style="color:#5D4037; margin-right:6px;"></i> ${emp.nombre}
+            </div>
+            <div style="font-size:13px; color:#8e8e93; margin-top:2px;">Rol: ${emp.cargo}</div>
+            <span style="color:#1c1c1e; font-weight:600; font-size:14px; margin-top:4px; display:block;">
+              Sueldo: ${formatearDinero(emp.sueldo)}
+            </span>
+          </div>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <button class="icon-btn danger" onclick="eliminarEmpleado(${emp.id})" style="width:36px; height:36px; font-size:14px;"><i class="fas fa-trash"></i></button>
+            <button class="btn" style="background:#3E2723; color:white; padding: 8px 14px; width:auto; border-radius:12px; font-size:13px;" onclick="pagarEmpleado(${emp.id})">
+              <i class="fas fa-hand-holding-usd"></i> Pagar
+            </button>
+          </div>
+        </li>
+      `).join('');
+    }
+
+    window.abrirModalEmpleado = (id = null) => {
+      document.getElementById('empleado-nombre').value = '';
+      document.getElementById('empleado-cargo').value = '';
+      document.getElementById('empleado-sueldo').value = '';
+      document.getElementById('empleado-id').value = '';
+      
+      if (id) {
+        const emp = empleados.find(e => e.id === id);
+        if (emp) {
+          document.getElementById('titulo-modal-empleado').textContent = 'Editar Empleado';
+          document.getElementById('empleado-nombre').value = emp.nombre;
+          document.getElementById('empleado-cargo').value = emp.cargo;
+          document.getElementById('empleado-sueldo').value = emp.sueldo;
+          document.getElementById('empleado-id').value = emp.id;
+        }
+      } else {
+        document.getElementById('titulo-modal-empleado').textContent = 'Nuevo Empleado';
+      }
+      
+      document.getElementById('modal-empleado').classList.add('active');
+    };
+
+    document.getElementById('btn-guardar-empleado').addEventListener('click', () => {
+      const nombre = document.getElementById('empleado-nombre').value.trim();
+      const cargo = document.getElementById('empleado-cargo').value.trim();
+      const sueldo = parseFloat(document.getElementById('empleado-sueldo').value);
+      const idExistente = document.getElementById('empleado-id').value;
+
+      if (!nombre || !cargo || isNaN(sueldo) || sueldo < 0) {
+        mostrarToast('Por favor, completa todos los campos correctamente.', 2000);
+        return;
+      }
+
+      if (idExistente) {
+        const emp = empleados.find(e => e.id == idExistente);
+        if (emp) {
+          emp.nombre = nombre;
+          emp.cargo = cargo;
+          emp.sueldo = sueldo;
+        }
+      } else {
+        empleados.push({
+          id: Date.now(),
+          nombre: nombre,
+          cargo: cargo,
+          sueldo: sueldo
+        });
+      }
+
+      guardarDatos();
+      renderizarEmpleados();
+      document.getElementById('modal-empleado').classList.remove('active');
+      mostrarToast('✅ Datos del empleado guardados', 2000);
+    });
+
+    window.eliminarEmpleado = (id) => {
+      if (!confirm('¿Estás seguro de eliminar a este empleado? Su historial de pagos se mantendrá en gastos.')) return;
+      empleados = empleados.filter(e => e.id !== id);
+      guardarDatos();
+      renderizarEmpleados();
+      mostrarToast('🗑️ Empleado eliminado', 2000);
+    };
+
+    window.pagarEmpleado = (id) => {
+      const emp = empleados.find(e => e.id === id);
+      if (!emp) return;
+      
+      if (!confirm(`¿Confirmas el pago de nómina de ${formatearDinero(emp.sueldo)} a ${emp.nombre}? Esto se descontará de la ganancia neta.`)) return;
+
+      gastos.unshift({
+        id: Date.now() + Math.random(),
+        descripcion: `Nómina: ${emp.nombre} (${emp.cargo})`,
+        monto: emp.sueldo,
+        fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'})
+      });
+
+      guardarDatos();
+      if (document.getElementById('finanzas').classList.contains('active')) {
+        renderizarFinanzas();
+        renderizarGastos();
+      }
+      mostrarToast(`✅ Pago de nómina registrado con éxito`, 3000);
+    };
 
   })();
 </script>
