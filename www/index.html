@@ -328,6 +328,10 @@
         <div class="dash-value" id="fin-compras" style="color: #007aff;">$0.00</div>
       </div>
       <div class="dash-card">
+        <div class="dash-label">Costo Producción</div>
+        <div class="dash-value" id="fin-produccion" style="color: #8e44ad;">$0.00</div>
+      </div>
+      <div class="dash-card">
         <div class="dash-label">Credito</div>
         <div class="dash-value" id="fin-por-cobrar" style="color: #d97706;">$0.00</div>
       </div>
@@ -336,7 +340,7 @@
         <div class="dash-value" id="fin-ingresos" style="color: #1c1c1e;">$0.00</div>
       </div>
       <div class="dash-card">
-        <div class="dash-label">Costo de Producción</div>
+        <div class="dash-label">Costo de Ventas</div>
         <div class="dash-value" id="fin-costos" style="color: #ff3b30;">$0.00</div>
       </div>
     </div>
@@ -363,7 +367,7 @@
     </div>
   </section>
 
-  <!-- Modales -->
+  <!-- Modales (no se modifican, se mantienen igual) -->
   <div class="modal-overlay" id="modal-receta">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -879,8 +883,8 @@
       }
     ];
 
-    // Variables globales
-    let productos = [], recetas = [], ventas = [], clientes = [], gastos = [], compras = [];
+    // Variables globales (añadido producciones)
+    let productos = [], recetas = [], ventas = [], clientes = [], gastos = [], compras = [], producciones = [];
     let recetaActual = null, prodEditando = null, productoVentaSeleccionado = null, clienteAbonoActual = null;
     let ultimaActualizacionLocal = null;
     let ingredientesTemporales = [];
@@ -962,6 +966,8 @@
       if (g) gastos = JSON.parse(g); else gastos = [];
       const com = localStorage.getItem('almacen_fusion_compras_v7_esencias');
       if (com) compras = JSON.parse(com); else compras = [];
+      const prod = localStorage.getItem('almacen_fusion_producciones_v7_esencias');
+      if (prod) producciones = JSON.parse(prod); else producciones = [];
       ultimaActualizacionLocal = localStorage.getItem('almacen_ultima_actualizacion') || null;
     }
 
@@ -972,6 +978,7 @@
       localStorage.setItem('almacen_fusion_clientes_v7_esencias', JSON.stringify(clientes));
       localStorage.setItem('almacen_fusion_gastos_v7_esencias', JSON.stringify(gastos));
       localStorage.setItem('almacen_fusion_compras_v7_esencias', JSON.stringify(compras));
+      localStorage.setItem('almacen_fusion_producciones_v7_esencias', JSON.stringify(producciones));
       const ahora = new Date().toISOString();
       localStorage.setItem('almacen_ultima_actualizacion', ahora);
       ultimaActualizacionLocal = ahora;
@@ -986,7 +993,7 @@
         actualizarIndicadorSync('syncing');
         try {
           const estadoCompleto = {
-            productos, recetas, ventas, clientes, gastos, compras,
+            productos, recetas, ventas, clientes, gastos, compras, producciones,
             ultima_actualizacion: ultimaActualizacionLocal
           };
           const { error } = await supabaseClient
@@ -1022,7 +1029,6 @@
           const fechaRemota = remoto.ultima_actualizacion;
           const fechaLocal = ultimaActualizacionLocal;
           
-          // FUNCIÓN AUXILIAR PARA FUSIONAR PRODUCTOS PRESERVANDO paqueteCantidad LOCAL
           function fusionarProductosRemotos(productosRemotos) {
             return productosRemotos.map(prodRemoto => {
               const prodLocal = productos.find(p => p.nombre === prodRemoto.nombre);
@@ -1045,6 +1051,7 @@
               clientes  = remoto.clientes || clientes;
               gastos    = remoto.gastos || gastos;
               compras   = remoto.compras || compras;
+              producciones = remoto.producciones || producciones;
               ultimaActualizacionLocal = fechaRemota;
               guardarLocal();
               if(lblCarga) lblCarga.textContent = "✅ Datos de la nube aplicados";
@@ -1059,6 +1066,7 @@
             clientes  = remoto.clientes || clientes;
             gastos    = remoto.gastos || gastos;
             compras   = remoto.compras || compras;
+            producciones = remoto.producciones || producciones;
             ultimaActualizacionLocal = fechaRemota;
             guardarLocal();
             if(lblCarga) lblCarga.textContent = "✅ Datos de la nube aplicados";
@@ -1446,6 +1454,14 @@
         }
       }
       let paquetes = 0;
+      let costoProduccion = 0; // acumular costo de la producción
+      for (let ing of recetaActual.ingredientes) {
+        const p = encontrarProducto(ing.nombre);
+        const cantidadNecesaria = ing.cantidad * factorEscala;
+        const cantConvertida = convertirABase(cantidadNecesaria, ing.unidad, p.unidad, ing.nombre);
+        costoProduccion += p.costo * cantConvertida;
+        p.cantidad -= cantConvertida;
+      }
       if (recetaActual.productoResultante.tipo === 'compuesto') {
         const up = recetaActual.productoResultante.paquete.unidadesPorPaquete;
         paquetes = Math.floor(totalUnidades / up);
@@ -1456,18 +1472,9 @@
             mostrarToast(`Faltan bolsas: ${insumo.nombre} (necesitas ${paquetes})`, 2500); 
             return; 
           }
+          prodIns.cantidad -= paquetes;
+          costoProduccion += prodIns.costo * paquetes;
         }
-      }
-      for (let ing of recetaActual.ingredientes) {
-        const p = encontrarProducto(ing.nombre);
-        const cantidadNecesaria = ing.cantidad * factorEscala;
-        p.cantidad -= convertirABase(cantidadNecesaria, ing.unidad, p.unidad, ing.nombre);
-      }
-      if (recetaActual.productoResultante.tipo === 'compuesto' && recetaActual.productoResultante.insumoEmpaque) {
-        const b = encontrarProducto(recetaActual.productoResultante.insumoEmpaque.nombre);
-        b.cantidad -= paquetes;
-      }
-      if (recetaActual.productoResultante.tipo === 'compuesto') {
         let pPaq = encontrarProducto(recetaActual.productoResultante.paquete.nombre);
         if (!pPaq) { 
           pPaq = { nombre: recetaActual.productoResultante.paquete.nombre, cantidad: 0, unidad: 'unidades', costo: 0, precio: 0, paqueteCantidad: 0 };
@@ -1479,7 +1486,7 @@
           pSuel = { nombre: recetaActual.productoResultante.suelto.nombre, cantidad: 0, unidad: 'unidades', costo: 0, precio: 0, paqueteCantidad: 0 };
           productos.push(pSuel);
         }
-        pSuel.cantidad += totalUnidades % recetaActual.productoResultante.paquete.unidadesPorPaquete;
+        pSuel.cantidad += totalUnidades % up;
       } else {
         let pSuel = encontrarProducto(recetaActual.productoResultante.suelto.nombre);
         if (!pSuel) { 
@@ -1488,6 +1495,16 @@
         }
         pSuel.cantidad += totalUnidades;
       }
+      
+      // Registrar la producción
+      producciones.push({
+        id: Date.now(),
+        fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
+        producto: recetaActual.nombre,
+        cantidad: totalUnidades.toFixed(0),
+        costo: costoProduccion
+      });
+      
       guardarDatos();
       renderizarProductos(); 
       actualizarVistaReceta();
@@ -2000,14 +2017,17 @@
     });
 
     // ---------- FINANZAS ----------
+    
     function renderizarFinanzas() {
       let totalIngresos = 0, totalCostos = 0, totalGanancia = 0;
       const listaVentas = document.getElementById('lista-ventas');
+      
       if (ventas.length === 0) {
         listaVentas.innerHTML = '<div style="text-align:center; padding:20px; color:#8e8e93;">No hay ventas ni abonos registrados aún</div>';
       } else {
         listaVentas.innerHTML = '';
       }
+      
       ventas.forEach(v => {
         totalIngresos += v.ingreso || 0;
         totalCostos += v.costo || 0;
@@ -2022,25 +2042,43 @@
             <div class="venta-monto" style="color: ${colorMonto}">${v.ingreso > 0 ? '+'+formatearDinero(v.ingreso) : 'Fiado'}</div>
           </div>`;
       });
+      
       const totalPorCobrar = clientes.reduce((acc, cli) => acc + (cli.deuda || 0), 0);
       const totalGastos = gastos.reduce((acc, g) => acc + (g.monto || 0), 0);
-      const totalCompras = compras.reduce((acc, c) => acc + (c.total || 0), 0);
+      const totalProducciones = producciones.reduce((acc, p) => acc + (p.costo || 0), 0);
+
+      // NUEVO CÁLCULO DE CAPITAL: Basado exclusivamente en el inventario físico real
+      let capitalNeto = 0;
+      productos.forEach(p => {
+        // Solo sumamos la materia prima (ignoramos productos finales) y evitamos cantidades negativas
+        if (!esProductoFinal(p.nombre) && p.cantidad > 0) {
+          capitalNeto += p.cantidad * p.costo;
+        }
+      });
+
       setTextSafe('fin-ingresos', totalIngresos);
       setTextSafe('fin-costos', totalCostos);
       setTextSafe('fin-por-cobrar', totalPorCobrar);
       setTextSafe('fin-gastos', totalGastos);
-      setTextSafe('fin-compras', totalCompras);
-      const gananciaNeta = totalGanancia - totalGastos - totalCompras;
+      setTextSafe('fin-compras', capitalNeto); // Actualiza la tarjeta de Capital con el valor real
+      setTextSafe('fin-produccion', totalProducciones);
+
+      // NUEVO CÁLCULO DE GANANCIA NETA: Ya no restamos la producción aquí para evitar el doble descuento
+      const gananciaNeta = totalGanancia - totalGastos; 
+      
       const finGanancia = document.getElementById('fin-ganancia');
       if (finGanancia) {
         finGanancia.textContent = formatearDinero(gananciaNeta);
         finGanancia.style.color = gananciaNeta >= 0 ? '#34c759' : '#ff3b30';
       }
+      
       function setTextSafe(id, value) {
         const el = document.getElementById(id);
         if (el) el.textContent = formatearDinero(value);
       }
     }
+    
+    
 
     function renderizarGastos() {
       const lista = document.getElementById('lista-gastos');
@@ -2076,7 +2114,7 @@
     });
 
     document.getElementById('btn-limpiar-finanzas').addEventListener('click', () => {
-      if (ventas.length === 0 && gastos.length === 0 && compras.length === 0) {
+      if (ventas.length === 0 && gastos.length === 0 && compras.length === 0 && producciones.length === 0) {
         mostrarToast('No hay nada que limpiar'); return;
       }
       papeleraVentas = ventas;
@@ -2084,6 +2122,7 @@
       ventas = [];
       gastos = [];
       compras = [];
+      producciones = [];
       guardarDatos();
       mostrarToast('Historial limpiado. Toca este aviso para deshacer (30s)', 30000);
       let timeout = setTimeout(() => {
@@ -2103,7 +2142,7 @@
     });
 
     function exportarDatos() {
-      const datos = { productos, recetas, ventas, clientes, gastos, compras };
+      const datos = { productos, recetas, ventas, clientes, gastos, compras, producciones };
       const blob = new Blob([JSON.stringify(datos, null, 2)], {type: 'application/json'});
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -2128,13 +2167,14 @@
       reader.onload = (ev) => {
         try {
           const datos = JSON.parse(ev.target.result);
-          if (datos.productos && Array.isArray(datos.productos) && datos.recetas && Array.isArray(datos.recetas) && Array.isArray(datos.ventas) && Array.isArray(datos.clientes) && Array.isArray(datos.gastos) && Array.isArray(datos.compras)) {
+          if (datos.productos && Array.isArray(datos.productos) && datos.recetas && Array.isArray(datos.recetas) && Array.isArray(datos.ventas) && Array.isArray(datos.clientes) && Array.isArray(datos.gastos) && Array.isArray(datos.compras) && Array.isArray(datos.producciones)) {
             localStorage.setItem('almacen_fusion_productos_v7_esencias', JSON.stringify(datos.productos));
             localStorage.setItem('almacen_fusion_recetas_v7_esencias', JSON.stringify(datos.recetas));
             localStorage.setItem('almacen_fusion_ventas_v7_esencias', JSON.stringify(datos.ventas));
             localStorage.setItem('almacen_fusion_clientes_v7_esencias', JSON.stringify(datos.clientes));
             localStorage.setItem('almacen_fusion_gastos_v7_esencias', JSON.stringify(datos.gastos));
             localStorage.setItem('almacen_fusion_compras_v7_esencias', JSON.stringify(datos.compras));
+            localStorage.setItem('almacen_fusion_producciones_v7_esencias', JSON.stringify(datos.producciones));
             mostrarToast('✅ Datos restaurados. Recargando...', 1500);
             setTimeout(() => location.reload(), 1200);
           } else {
