@@ -324,19 +324,19 @@
         <div class="dash-value" id="fin-gastos" style="color: #ff9500;">$0.00</div>
       </div>
       <div class="dash-card">
-        <div class="dash-label">Inversión en Compras</div>
+        <div class="dash-label">Capital</div>
         <div class="dash-value" id="fin-compras" style="color: #007aff;">$0.00</div>
       </div>
       <div class="dash-card">
-        <div class="dash-label">Por Cobrar (Fiado)</div>
+        <div class="dash-label">Credito</div>
         <div class="dash-value" id="fin-por-cobrar" style="color: #d97706;">$0.00</div>
       </div>
       <div class="dash-card">
-        <div class="dash-label">Ingresos Reales</div>
+        <div class="dash-label">Ingresos de Ventas</div>
         <div class="dash-value" id="fin-ingresos" style="color: #1c1c1e;">$0.00</div>
       </div>
       <div class="dash-card">
-        <div class="dash-label">Costo de Ventas</div>
+        <div class="dash-label">Costo de Producción</div>
         <div class="dash-value" id="fin-costos" style="color: #ff3b30;">$0.00</div>
       </div>
     </div>
@@ -512,6 +512,27 @@
           <div id="total-compra-estimado" style="background: #e9f0ff; padding: 8px 12px; border-radius: 12px; margin-top: 12px; font-weight: 600; color: #007aff; text-align: center; display: none;">
             Total estimado de la compra: <span id="lbl-total-compra">$0.00</span>
           </div>
+
+          <!-- NUEVO: Opción de precio por paquete -->
+          <div style="margin-top:12px; border-top:1px solid #ffe8cc; padding-top:12px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#8e8e93; cursor:pointer;">
+              <input type="checkbox" id="usar-paquete-costo" style="width:18px; height:18px; accent-color:#007aff;">
+              📦 Ingresar como paquete / lote
+            </label>
+            <div id="zona-paquete-costo" style="display:none; margin-top:8px; background:#ffffff; padding:10px; border-radius:12px;">
+              <div style="display:flex; gap:8px; align-items:center;">
+                <span style="font-weight:500;">💵 Precio total $</span>
+                <input type="number" id="paquete-precio" class="input-field" style="flex:1;" step="0.01" placeholder="Ej: 2.50">
+              </div>
+              <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+                <span style="font-weight:500;">📦 Cantidad del paquete</span>
+                <input type="number" id="paquete-cantidad" class="input-field" style="flex:1;" step="any" placeholder="Ej: 100">
+              </div>
+              <p id="lbl-costo-unitario-paquete" style="font-size:12px; color:#007aff; margin-top:6px; font-weight:600;"></p>
+            </div>
+          </div>
+          <!-- FIN NUEVO -->
+
         </div>
 
         <div id="zona-precio" style="background: #f0fdf4; padding: 16px; border-radius: 16px; margin-bottom: 16px; border: 1px solid #bbf7d0; display: none;">
@@ -607,53 +628,53 @@
   (function(){
     "use strict";
 
-    // Productos iniciales (sin cambios)
+    // Productos iniciales (añadir propiedad paqueteCantidad a cada uno, por defecto 0)
     const PRODUCTOS_INICIALES = [
-      { nombre: "Harina", cantidad: 0, unidad: "sacos", costo: 38.5, precio: 0 },
-      { nombre: "Azúcar", cantidad: 0, unidad: "sacos", costo: 66.0, precio: 0 },
-      { nombre: "Manteca", cantidad: 0, unidad: "kg", costo: 3.5, precio: 0 }, 
-      { nombre: "Micovan", cantidad: 0, unidad: "kg", costo: 7.0, precio: 0 },
-      { nombre: "Bicarbonato", cantidad: 0, unidad: "kg", costo: 6.0, precio: 0 },
-      { nombre: "Polvo de hornear", cantidad: 0, unidad: "kg", costo: 6.0, precio: 0 },
-      { nombre: "Esencias vainilla y anís", cantidad: 0, unidad: "kg", costo: 5.0, precio: 0 },
-      { nombre: "Sabor vainilla", cantidad: 0, unidad: "kg", costo: 5.0, precio: 0 },
-      { nombre: "Colorante", cantidad: 0, unidad: "L", costo: 11.0, precio: 0 },
-      { nombre: "Guayaba", cantidad: 0, unidad: "kg", costo: 2.0, precio: 0 }, 
-      { nombre: "Arequipe (Tobo)", cantidad: 0, unidad: "kg", costo: 4.0, precio: 0 },
-      { nombre: "Levadura", cantidad: 0, unidad: "kg", costo: 5.0, precio: 0 },
-      { nombre: "Bolsas 1k", cantidad: 0, unidad: "unidades", costo: 0.012, precio: 0 },
-      { nombre: "Bolsas 22x60", cantidad: 0, unidad: "unidades", costo: 0.028, precio: 0 },
-      { nombre: "Bolsas 24x60", cantidad: 0, unidad: "unidades", costo: 0.03, precio: 0 },
-      { nombre: "Bolsas 20x50", cantidad: 0, unidad: "unidades", costo: 0.025, precio: 0 },
-      { nombre: "Bolsas canilla 3", cantidad: 0, unidad: "unidades", costo: 0.025, precio: 0 },
-      { nombre: "Anís en granos", cantidad: 0, unidad: "kg", costo: 4.0, precio: 0 },
-      { nombre: "Sal", cantidad: 0, unidad: "kg", costo: 0.5, precio: 0 },
-      { nombre: "Coco", cantidad: 0, unidad: "kg", costo: 7.0, precio: 0 },
-      { nombre: "Frutilla", cantidad: 0, unidad: "kg", costo: 8.0, precio: 0 },
-      { nombre: "Paquete Catalinas 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.0 },
-      { nombre: "Catalinas sueltas (unidad)", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.3 },
-      { nombre: "Paquete Polvorosas 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.5 },
-      { nombre: "Polvorosas sueltas (unidad)", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.35 },
-      { nombre: "Paquete Cortaos 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.0 },
-      { nombre: "Cortaos sueltas (unidad)", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.3 },
-      { nombre: "Paquete Catalinas pequeñas 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.5 },
-      { nombre: "Catalinas pequeñas sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.2 },
-      { nombre: "Paquete Roscas pequeñas 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.5 },
-      { nombre: "Roscas pequeñas sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.2 },
-      { nombre: "Paquete Pan andino 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 4.0 },
-      { nombre: "Pan andino sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 2.0 },
-      { nombre: "Paquete Pan de guayaba 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 4.0 },
-      { nombre: "Pan de guayaba sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.5 },
-      { nombre: "Paquete Pan salado 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.0 },
-      { nombre: "Pan salado sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.6 },
-      { nombre: "Paquete Pan francés 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.0 },
-      { nombre: "Pan francés sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.3 },
-      { nombre: "Paquete Pan siciliano 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.5 },
-      { nombre: "Pan siciliano sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.9 },
-      { nombre: "Paquete Pan campesino 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.5 },
-      { nombre: "Pan campesino sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 1.5 },
-      { nombre: "Paquete Lenguas 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.0 },
-      { nombre: "Lenguas sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.3 }
+      { nombre: "Harina", cantidad: 0, unidad: "sacos", costo: 38.5, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Azúcar", cantidad: 0, unidad: "sacos", costo: 66.0, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Manteca", cantidad: 0, unidad: "kg", costo: 3.5, precio: 0, paqueteCantidad: 0 }, 
+      { nombre: "Micovan", cantidad: 0, unidad: "kg", costo: 7.0, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Bicarbonato", cantidad: 0, unidad: "kg", costo: 6.0, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Polvo de hornear", cantidad: 0, unidad: "kg", costo: 6.0, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Esencias vainilla y anís", cantidad: 0, unidad: "kg", costo: 5.0, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Sabor vainilla", cantidad: 0, unidad: "kg", costo: 5.0, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Colorante", cantidad: 0, unidad: "L", costo: 11.0, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Guayaba", cantidad: 0, unidad: "kg", costo: 2.0, precio: 0, paqueteCantidad: 0 }, 
+      { nombre: "Arequipe (Tobo)", cantidad: 0, unidad: "kg", costo: 4.0, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Levadura", cantidad: 0, unidad: "kg", costo: 5.0, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Bolsas 1k", cantidad: 0, unidad: "unidades", costo: 0.012, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Bolsas 22x60", cantidad: 0, unidad: "unidades", costo: 0.028, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Bolsas 24x60", cantidad: 0, unidad: "unidades", costo: 0.03, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Bolsas 20x50", cantidad: 0, unidad: "unidades", costo: 0.025, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Bolsas canilla 3", cantidad: 0, unidad: "unidades", costo: 0.025, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Anís en granos", cantidad: 0, unidad: "kg", costo: 4.0, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Sal", cantidad: 0, unidad: "kg", costo: 0.5, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Coco", cantidad: 0, unidad: "kg", costo: 7.0, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Frutilla", cantidad: 0, unidad: "kg", costo: 8.0, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Paquete Catalinas 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.0, paqueteCantidad: 0 },
+      { nombre: "Catalinas sueltas (unidad)", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.3, paqueteCantidad: 0 },
+      { nombre: "Paquete Polvorosas 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.5, paqueteCantidad: 0 },
+      { nombre: "Polvorosas sueltas (unidad)", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.35, paqueteCantidad: 0 },
+      { nombre: "Paquete Cortaos 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.0, paqueteCantidad: 0 },
+      { nombre: "Cortaos sueltas (unidad)", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.3, paqueteCantidad: 0 },
+      { nombre: "Paquete Catalinas pequeñas 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.5, paqueteCantidad: 0 },
+      { nombre: "Catalinas pequeñas sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.2, paqueteCantidad: 0 },
+      { nombre: "Paquete Roscas pequeñas 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.5, paqueteCantidad: 0 },
+      { nombre: "Roscas pequeñas sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.2, paqueteCantidad: 0 },
+      { nombre: "Paquete Pan andino 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 4.0, paqueteCantidad: 0 },
+      { nombre: "Pan andino sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 2.0, paqueteCantidad: 0 },
+      { nombre: "Paquete Pan de guayaba 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 4.0, paqueteCantidad: 0 },
+      { nombre: "Pan de guayaba sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.5, paqueteCantidad: 0 },
+      { nombre: "Paquete Pan salado 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.0, paqueteCantidad: 0 },
+      { nombre: "Pan salado sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.6, paqueteCantidad: 0 },
+      { nombre: "Paquete Pan francés 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.0, paqueteCantidad: 0 },
+      { nombre: "Pan francés sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.3, paqueteCantidad: 0 },
+      { nombre: "Paquete Pan siciliano 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.5, paqueteCantidad: 0 },
+      { nombre: "Pan siciliano sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.9, paqueteCantidad: 0 },
+      { nombre: "Paquete Pan campesino 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.5, paqueteCantidad: 0 },
+      { nombre: "Pan campesino sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 1.5, paqueteCantidad: 0 },
+      { nombre: "Paquete Lenguas 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.0, paqueteCantidad: 0 },
+      { nombre: "Lenguas sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.3, paqueteCantidad: 0 }
     ];
 
     const UNIDADES_PERMITIDAS = ['sacos', 'kg', 'g', 'L', 'ml', 'unidades'];
@@ -906,6 +927,8 @@
     function cargarLocal() {
       const p = localStorage.getItem('almacen_fusion_productos_v7_esencias'); 
       if (p) productos = JSON.parse(p); else productos = [...PRODUCTOS_INICIALES];
+      // Asegurar que todos los productos tengan paqueteCantidad
+      productos.forEach(prod => { if (prod.paqueteCantidad === undefined) prod.paqueteCantidad = 0; });
       const r = localStorage.getItem('almacen_fusion_recetas_v7_esencias'); 
       if (r) recetas = JSON.parse(r); else recetas = [...RECETAS_PREDEF];
       const v = localStorage.getItem('almacen_fusion_ventas_v7_esencias'); 
@@ -1029,6 +1052,8 @@
         setTimeout(() => {
           if(pantallaCarga) pantallaCarga.style.display = 'none';
         }, 1000);
+        // Asegurar paqueteCantidad en todos los productos después de cargar
+        productos.forEach(prod => { if (prod.paqueteCantidad === undefined) prod.paqueteCantidad = 0; });
         renderizarProductos();
         renderizarGridVentas();
         renderizarClientes();
@@ -1051,14 +1076,26 @@
       document.getElementById('total-productos').textContent = `${productos.length} prod.`;
       
       document.getElementById('lista-productos').innerHTML = filtrados.map(prod => {
-        const cant = Number.isInteger(prod.cantidad) ? prod.cantidad : parseFloat(prod.cantidad.toFixed(3));
+        const cant = prod.cantidad; // número de unidades reales (ej. 100 bolsas)
+        let stockDisplay = '';
         let tagFinanciero = '';
         let infoExtra = '';
         let stockWarning = '';
 
+        // Mostrar stock como paquetes si está configurado
+        if (prod.paqueteCantidad > 0) {
+          const paquetes = Math.floor(cant / prod.paqueteCantidad);
+          const resto = cant % prod.paqueteCantidad;
+          stockDisplay = `<div class="product-stock">${paquetes} <span class="product-unit">paq.</span> <small style="color:#8e8e93;">(${cant} ${prod.unidad})</small></div>`;
+          if (resto > 0) stockDisplay += `<small style="color:#8e8e93;"> (${resto} sueltos)</small>`;
+        } else {
+          stockDisplay = `<div class="product-stock">${cant} <span class="product-unit">${prod.unidad}</span></div>`;
+        }
+
         // Alerta de stock bajo
         if (!esProductoFinal(prod.nombre)) {
-          if ((prod.unidad === 'sacos' && cant < 0.5) || (prod.unidad === 'kg' && cant < 5) || (prod.unidad === 'g' && cant < 500) || (prod.unidad === 'L' && cant < 2)) {
+          const umbralBajo = prod.paqueteCantidad > 0 ? prod.paqueteCantidad * 0.5 : 0.5;
+          if ((prod.unidad === 'sacos' && cant < 0.5) || (prod.unidad === 'kg' && cant < 5) || (prod.unidad === 'g' && cant < 500) || (prod.unidad === 'L' && cant < 2) || (prod.paqueteCantidad > 0 && cant < umbralBajo)) {
             stockWarning = '<span class="badge-warning">Bajo</span>';
           }
         }
@@ -1091,7 +1128,7 @@
             const kg = prod.nombre.toLowerCase().includes('harina') ? 45 : 50;
             sacoDetalle = ` <span style="color:#c6c6c8; font-weight:400;">(${kg}kg c/u)</span>`;
           }
-          const costoTotalStock = prod.cantidad * prod.costo;
+          const costoTotalStock = cant * prod.costo;
           tagFinanciero = `<span class="product-cost">Total invertido: ${formatearDinero(costoTotalStock)} &nbsp;<small style="font-weight:400;">( ${formatearDinero(prod.costo)} / ${prod.unidad}${sacoDetalle} )</small></span>`;
         }
 
@@ -1099,7 +1136,7 @@
           <li class="product-item">
             <div class="product-info">
               <div class="product-name">${prod.nombre} ${stockWarning}</div>
-              <div class="product-stock">${cant} <span class="product-unit">${prod.unidad}</span></div>
+              ${stockDisplay}
               ${infoExtra}
               ${tagFinanciero}
             </div>
@@ -1114,30 +1151,35 @@
     }
 
     window.ajusteRapido = function(nombre, delta) {
-  const prod = encontrarProducto(nombre);
-  if (!prod) return;
+      const prod = encontrarProducto(nombre);
+      if (!prod) return;
 
-  // Si estamos sumando (+) y es materia prima (no producto final)
-  if (delta > 0 && !esProductoFinal(prod.nombre)) {
-    const costoTotalCompra = delta * prod.costo;
-    compras.push({
-      id: Date.now() + Math.random(),
-      fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
-      producto: prod.nombre,
-      cantidad: delta,
-      unidad: prod.unidad,
-      costoUnitario: prod.costo,
-      total: costoTotalCompra
-    });
-  }
+      // Si el producto tiene paquete, usar la cantidad del paquete en vez de 1
+      let incremento = delta;
+      if (prod.paqueteCantidad > 0) {
+        incremento = delta * prod.paqueteCantidad;
+      }
 
-  prod.cantidad = Math.max(0, prod.cantidad + delta);
-  
-  // Guardar y actualizar la interfaz
-  guardarDatos();
-  renderizarProductos(document.getElementById('buscar-producto').value);
-};
+      // Si estamos sumando y es materia prima (no producto final)
+      if (incremento > 0 && !esProductoFinal(prod.nombre)) {
+        const costoTotalCompra = incremento * prod.costo;
+        compras.push({
+          id: Date.now() + Math.random(),
+          fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
+          producto: prod.nombre,
+          cantidad: incremento,
+          unidad: prod.unidad,
+          costoUnitario: prod.costo,
+          total: costoTotalCompra
+        });
+      }
 
+      prod.cantidad = Math.max(0, prod.cantidad + incremento);
+      
+      // Guardar y actualizar la interfaz
+      guardarDatos();
+      renderizarProductos(document.getElementById('buscar-producto').value);
+    };
 
     function actualizarSelectorBolsasReceta() {
       const bolsas = productos.filter(p => p.nombre.toLowerCase().includes('bolsa'));
@@ -1166,6 +1208,22 @@
         calcularCostoUnitario();
         actualizarTotalCompraEstimado();
       }
+
+      // Resetear modo paquete
+      const usarPaquete = prodEditando.paqueteCantidad > 0;
+      document.getElementById('usar-paquete-costo').checked = usarPaquete;
+      document.getElementById('zona-paquete-costo').style.display = usarPaquete ? 'block' : 'none';
+      document.getElementById('paquete-precio').value = '';
+      document.getElementById('paquete-cantidad').value = usarPaquete ? prodEditando.paqueteCantidad : '';
+      document.getElementById('lbl-costo-unitario-paquete').textContent = '';
+      document.getElementById('costo-total-producto').disabled = usarPaquete;
+      if (usarPaquete) {
+        // Calcular precio total para pre-llenar
+        const precioTotal = prodEditando.costo * prodEditando.paqueteCantidad;
+        document.getElementById('paquete-precio').value = precioTotal.toFixed(2);
+        calcularCostoDesdePaquete();
+      }
+
       document.getElementById('modal-ingreso').classList.add('active');
     };
 
@@ -1246,23 +1304,31 @@
         }
       }
 
+      // Guardar configuración de paquete
+      const usarPaquete = document.getElementById('usar-paquete-costo').checked;
+      if (usarPaquete) {
+        const cantPaquete = parseFloat(document.getElementById('paquete-cantidad').value) || 0;
+        prodEditando.paqueteCantidad = cantPaquete;
+      } else {
+        prodEditando.paqueteCantidad = 0;
+      }
+
       if (cantidadComprada > 0 && !esProductoFinal(prodEditando.nombre)) {
-  const costoUnitarioActual = prodEditando.costo;
-  const totalCompra = cantidadComprada * costoUnitarioActual;
-  compras.push({
-    id: Date.now() + Math.random(),
-    fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
-    producto: prodEditando.nombre,
-    cantidad: cantidadComprada,
-    unidad: prodEditando.unidad,
-    costoUnitario: costoUnitarioActual,
-    total: totalCompra
-  });
-  // 👇 Agrega esto
-  if (document.getElementById('finanzas').classList.contains('active')) {
-    renderizarFinanzas();
-  }
-}
+        const costoUnitarioActual = prodEditando.costo;
+        const totalCompra = cantidadComprada * costoUnitarioActual;
+        compras.push({
+          id: Date.now() + Math.random(),
+          fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
+          producto: prodEditando.nombre,
+          cantidad: cantidadComprada,
+          unidad: prodEditando.unidad,
+          costoUnitario: costoUnitarioActual,
+          total: totalCompra
+        });
+        if (document.getElementById('finanzas').classList.contains('active')) {
+          renderizarFinanzas();
+        }
+      }
 
       guardarDatos();
       renderizarProductos(document.getElementById('buscar-producto').value);
@@ -1411,21 +1477,21 @@
       if (recetaActual.productoResultante.tipo === 'compuesto') {
         let pPaq = encontrarProducto(recetaActual.productoResultante.paquete.nombre);
         if (!pPaq) { 
-          pPaq = { nombre: recetaActual.productoResultante.paquete.nombre, cantidad: 0, unidad: 'unidades', costo: 0, precio: 0 };
+          pPaq = { nombre: recetaActual.productoResultante.paquete.nombre, cantidad: 0, unidad: 'unidades', costo: 0, precio: 0, paqueteCantidad: 0 };
           productos.push(pPaq);
         }
         pPaq.cantidad += paquetesProducidos;
 
         let pSuel = encontrarProducto(recetaActual.productoResultante.suelto.nombre);
         if (!pSuel) { 
-          pSuel = { nombre: recetaActual.productoResultante.suelto.nombre, cantidad: 0, unidad: 'unidades', costo: 0, precio: 0 };
+          pSuel = { nombre: recetaActual.productoResultante.suelto.nombre, cantidad: 0, unidad: 'unidades', costo: 0, precio: 0, paqueteCantidad: 0 };
           productos.push(pSuel);
         }
         pSuel.cantidad += sueltasProducidas;
       } else {
         let pSuel = encontrarProducto(recetaActual.productoResultante.suelto.nombre);
         if (!pSuel) { 
-          pSuel = { nombre: recetaActual.productoResultante.suelto.nombre, cantidad: 0, unidad: 'unidades', costo: 0, precio: 0 };
+          pSuel = { nombre: recetaActual.productoResultante.suelto.nombre, cantidad: 0, unidad: 'unidades', costo: 0, precio: 0, paqueteCantidad: 0 };
           productos.push(pSuel);
         }
         pSuel.cantidad += totalUnidadesProducidas;
@@ -1523,9 +1589,9 @@
       if (paqueteUnidades && parseInt(paqueteUnidades) > 0) {
         const uPaq = parseInt(paqueteUnidades);
         const nombrePaquete = `Paquete ${nombre} ${uPaq}u`;
-        if (!productos.some(p => p.nombre === nombrePaquete)) productos.push({ nombre: nombrePaquete, cantidad: 0, unidad: 'unidades', costo:0, precio:0 });
+        if (!productos.some(p => p.nombre === nombrePaquete)) productos.push({ nombre: nombrePaquete, cantidad: 0, unidad: 'unidades', costo:0, precio:0, paqueteCantidad: 0 });
         const nombreSuelto = `${nombre} sueltas`;
-        if (!productos.some(p => p.nombre === nombreSuelto)) productos.push({ nombre: nombreSuelto, cantidad: 0, unidad: 'unidades', costo:0, precio:0 });
+        if (!productos.some(p => p.nombre === nombreSuelto)) productos.push({ nombre: nombreSuelto, cantidad: 0, unidad: 'unidades', costo:0, precio:0, paqueteCantidad: 0 });
         
         productoResultante = {
           tipo: 'compuesto',
@@ -1535,7 +1601,7 @@
         };
       } else {
         const nombreSuelto = `${nombre} (unidad)`;
-        if (!productos.some(p => p.nombre === nombreSuelto)) productos.push({ nombre: nombreSuelto, cantidad: 0, unidad: 'unidades', costo:0, precio:0 });
+        if (!productos.some(p => p.nombre === nombreSuelto)) productos.push({ nombre: nombreSuelto, cantidad: 0, unidad: 'unidades', costo:0, precio:0, paqueteCantidad: 0 });
         productoResultante = { tipo: 'simple', suelto: { nombre: nombreSuelto } };
       }
       
@@ -2167,6 +2233,47 @@
     window.addEventListener('offline', () => actualizarIndicadorSync('offline'));
     if (!navigator.onLine) actualizarIndicadorSync('offline');
     else actualizarIndicadorSync('syncing');
+
+    // ===== NUEVO: Cálculo desde precio de paquete =====
+    const checkPaquete = document.getElementById('usar-paquete-costo');
+    const zonaPaquete = document.getElementById('zona-paquete-costo');
+
+    if (checkPaquete && zonaPaquete) {
+      checkPaquete.addEventListener('change', () => {
+        zonaPaquete.style.display = checkPaquete.checked ? 'block' : 'none';
+        if (!checkPaquete.checked) {
+          document.getElementById('paquete-precio').value = '';
+          document.getElementById('paquete-cantidad').value = '';
+          document.getElementById('lbl-costo-unitario-paquete').textContent = '';
+          document.getElementById('costo-total-producto').disabled = false;
+          document.getElementById('costo-total-producto').value = '';
+        } else {
+          document.getElementById('costo-total-producto').disabled = true;
+        }
+        calcularCostoUnitario(); // refresca la info de costo actual
+      });
+    }
+
+    function calcularCostoDesdePaquete() {
+      const precioPaq = parseFloat(document.getElementById('paquete-precio').value) || 0;
+      const cantPaq = parseFloat(document.getElementById('paquete-cantidad').value) || 0;
+      const usandoPaquete = document.getElementById('usar-paquete-costo').checked;
+      
+      if (usandoPaquete && precioPaq > 0 && cantPaq > 0) {
+        const costoUnitario = precioPaq / cantPaq;
+        document.getElementById('costo-total-producto').value = costoUnitario;
+        document.getElementById('lbl-costo-unitario-paquete').innerHTML = 
+          `✅ Costo por unidad = <strong>${formatearDinero(costoUnitario)}</strong> (precisión completa)`;
+      } else {
+        document.getElementById('costo-total-producto').value = '';
+        document.getElementById('lbl-costo-unitario-paquete').textContent = '';
+      }
+    }
+
+    document.getElementById('paquete-precio').addEventListener('input', calcularCostoDesdePaquete);
+    document.getElementById('paquete-cantidad').addEventListener('input', calcularCostoDesdePaquete);
+    // ===== FIN NUEVO =====
+
   })();
 </script>
 </body>
