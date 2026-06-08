@@ -153,7 +153,17 @@
     
     /* Finanzas */
     .finanzas-dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
-    .dash-card { background: #fff; padding: 18px; border-radius: 20px; border: 1px solid #EBE6E0; }
+    .dash-card { 
+      background: #fff; padding: 18px; border-radius: 20px; border: 1px solid #EBE6E0; 
+      cursor: pointer; transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
+      position: relative;
+    }
+    .dash-card:active { transform: scale(0.96); }
+    .dash-card::after { 
+      content: '\f05a'; font-family: 'Font Awesome 5 Free'; font-weight: 900;
+      position: absolute; top: 12px; right: 12px; color: #EBE6E0; font-size: 12px; opacity: 0.7;
+    }
+    .dash-card:hover { box-shadow: 0 4px 12px rgba(44, 36, 32, 0.05); }
     .dash-label { font-size: 12px; font-weight: 600; color: #8e8e93; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
     .dash-value { font-size: 24px; font-weight: 700; color: #2C2420; }
     
@@ -201,13 +211,13 @@
 </head>
 <body>
 
-  <div id="pantalla-carga" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#F8F6F4; z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-      <div class="spinner" style="border:4px solid #EBE6E0; border-top:4px solid #4A3628; border-radius:50%; width:44px; height:44px; animation:spin 1s linear infinite; margin-bottom:24px;"></div>
-      <h2 id="lbl-carga" style="font-size:18px; color:#2C2420;">Cargando...</h2>
-  </div>
-  <style>
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-  </style>
+<div id="pantalla-carga" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#F8F6F4; z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+  <div class="spinner" style="border:4px solid #EBE6E0; border-top:4px solid #4A3628; border-radius:50%; width:44px; height:44px; animation:spin 1s linear infinite; margin-bottom:24px;"></div>
+  <h2 id="lbl-carga" style="font-size:18px; color:#2C2420;">Cargando...</h2>
+</div>
+<style>
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
 
 <div class="app-container">
   <div class="status-bar">
@@ -342,36 +352,36 @@
 
   <section id="finanzas" class="section">
     <div class="finanzas-dashboard">
-      <div class="dash-card" style="background:#F0FDF4; border-color:#BBF7D0;">
+      <div class="dash-card" style="background:#F0FDF4; border-color:#BBF7D0;" onclick="abrirInfoFinanzas('caja')">
         <div class="dash-label">Caja (Efectivo)</div>
         <div class="dash-value" id="fin-caja" style="color: #16A34A;">$0.00</div>
       </div>
-      <div class="dash-card" style="background:#FFFBEB; border-color:#FDE68A;">
+      <div class="dash-card" style="background:#FFFBEB; border-color:#FDE68A;" onclick="abrirInfoFinanzas('por-pagar')">
         <div class="dash-label">Deuda Proveedores</div>
         <div class="dash-value" id="fin-por-pagar" style="color: #D97706;">$0.00</div>
       </div>
       
-      <div class="dash-card">
+      <div class="dash-card" onclick="abrirInfoFinanzas('ganancia')">
         <div class="dash-label">Ganancia Neta</div>
         <div class="dash-value" id="fin-ganancia" style="color: #16A34A;">$0.00</div>
       </div>
-      <div class="dash-card">
+      <div class="dash-card" onclick="abrirInfoFinanzas('gastos')">
         <div class="dash-label">Gastos Operativos</div>
         <div class="dash-value" id="fin-gastos" style="color: #D97706;">$0.00</div>
       </div>
-      <div class="dash-card">
+      <div class="dash-card" onclick="abrirInfoFinanzas('capital')">
         <div class="dash-label">Capital (Inventario)</div>
         <div class="dash-value" id="fin-compras" style="color: #4A3628;">$0.00</div>
       </div>
-      <div class="dash-card">
+      <div class="dash-card" onclick="abrirInfoFinanzas('por-cobrar')">
         <div class="dash-label">Crédito (A favor)</div>
         <div class="dash-value" id="fin-por-cobrar" style="color: #8E44AD;">$0.00</div>
       </div>
-      <div class="dash-card">
+      <div class="dash-card" onclick="abrirInfoFinanzas('ingresos')">
         <div class="dash-label">Ingresos Brutos</div>
         <div class="dash-value" id="fin-ingresos" style="color: #2C2420;">$0.00</div>
       </div>
-      <div class="dash-card">
+      <div class="dash-card" onclick="abrirInfoFinanzas('costos')">
         <div class="dash-label">Costo de Ventas</div>
         <div class="dash-value" id="fin-costos" style="color: #DC2626;">$0.00</div>
       </div>
@@ -403,6 +413,7 @@
     </div>
   </section>
 
+  <!-- MODALES EXISTENTES -->
   <div class="modal-overlay" id="modal-receta">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -632,6 +643,37 @@
       <ul class="product-list" id="lista-historial-cliente"></ul>
     </div>
   </div>
+
+  <div class="modal-overlay" id="modal-fiar-directo">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h2 class="modal-title">Fiar a <span id="fiar-nombre-cliente" style="color:#D97706;"></span></h2>
+        <button class="close-modal" onclick="document.getElementById('modal-fiar-directo').classList.remove('active')"><i class="fas fa-times"></i></button>
+      </div>
+      
+      <div id="contenedor-grid-fiar">
+        <input type="text" id="buscar-venta-fiar" placeholder="🔍 Buscar producto en stock..." class="input-field" style="margin-bottom: 12px;">
+        <div class="visual-grid" id="grid-fiar-directo"></div>
+      </div>
+
+      <div id="fiar-producto-seleccionado" style="display: none; text-align: center; margin-top: 16px;">
+        <h4 id="lbl-fiar-producto" style="font-size: 18px; color: #4A3628; margin-bottom: 4px;">Producto</h4>
+        <p id="lbl-fiar-stock" style="color: #8e8e93; font-size: 14px;">Stock: 0</p>
+        
+        <div style="margin-top: 14px; background: #FCFAF8; padding: 16px; border-radius: 16px; text-align:left; border: 1px solid #EBE6E0;">
+          <label style="font-weight:600; display:block; margin-bottom:6px; font-size:14px; color:#2C2420;">Precio unitario acordado (USD)</label>
+          <input type="number" id="input-fiar-precio" class="input-field" step="0.01" min="0.01">
+        </div>
+        
+        <div class="flex-row" style="margin-top: 16px;">
+          <input type="number" id="fiar-cantidad" class="input-field" value="1" min="1" step="1" style="flex:1;">
+          <button class="btn" id="btn-confirmar-fiar" style="background: #D97706; flex:2;"><i class="fas fa-plus-circle"></i> Añadir a la deuda</button>
+        </div>
+        
+        <button class="btn btn-outline" style="margin-top:12px;" onclick="volverGridFiar()">← Volver a productos</button>
+      </div>
+    </div>
+  </div>
   
   <div class="modal-overlay" id="modal-empleado">
     <div class="modal-sheet">
@@ -684,6 +726,25 @@
     </div>
   </div>
 
+  <!-- NUEVO MODAL: INFORMACIÓN DE FINANZAS -->
+  <div class="modal-overlay" id="modal-info-finanzas">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h2 class="modal-title" id="titulo-info-finanzas">Título</h2>
+        <button class="close-modal" onclick="document.getElementById('modal-info-finanzas').classList.remove('active')"><i class="fas fa-times"></i></button>
+      </div>
+      <div style="background: #FCFAF8; padding: 20px; border-radius: 18px; border: 1px solid #EBE6E0;">
+        <p style="font-size: 15px; color: #2C2420; line-height: 1.5; margin-bottom: 16px;" id="desc-info-finanzas"></p>
+        
+        <div style="background: #FFFBEB; padding: 16px; border-radius: 14px; border: 1px solid #FDE68A;">
+          <p style="font-size: 13px; color: #D97706; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;"><i class="fas fa-lightbulb"></i> Ejemplo práctico</p>
+          <p style="font-size: 14px; color: #4A3628; line-height: 1.4;" id="ejemplo-info-finanzas"></p>
+        </div>
+      </div>
+      <button class="btn" style="margin-top: 24px; background: #EBE6E0; color: #4A3628;" onclick="document.getElementById('modal-info-finanzas').classList.remove('active')">Entendido</button>
+    </div>
+  </div>
+
   <div id="toast" class="toast-message">Mensaje</div>
 
   <nav class="bottom-nav">
@@ -710,6 +771,59 @@
 
   (function(){
     "use strict";
+
+    // --- NUEVO DICCIONARIO DE DEFINICIONES FINANCIERAS ---
+    const INFO_FINANZAS = {
+      'caja': {
+        titulo: 'Caja (Efectivo / Banco)',
+        desc: 'Es el dinero líquido y real que tienes disponible a favor en este preciso momento.',
+        ejemplo: 'Incluye lo que tienes físicamente en la gaveta, pagos móviles o transferencias en el banco. Es el resultado de tus ventas al contado, menos los gastos y las compras que ya pagaste.'
+      },
+      'por-pagar': {
+        titulo: 'Deuda a Proveedores',
+        desc: 'Dinero que debes a terceros por mercancía que adquiriste a crédito (fiada) para el almacén.',
+        ejemplo: 'Los 2 sacos de harina y la caja de manteca que te dejó el distribuidor ayer y acordaste pagarle el viernes.'
+      },
+      'ganancia': {
+        titulo: 'Ganancia Neta',
+        desc: 'Es el beneficio real de tu negocio. Lo que te queda libre después de restar el costo de la mercancía que vendiste y todos los gastos operativos.',
+        ejemplo: 'Si vendiste $100 en pan, hacer ese pan te costó $40 en ingredientes, y pagaste $10 de pasaje (gasto), tu ganancia neta es $50. Ese es el dinero que realmente ganaste.'
+      },
+      'gastos': {
+        titulo: 'Gastos Operativos',
+        desc: 'Todo el dinero que sale del negocio que NO es para comprar materia prima para producir.',
+        ejemplo: 'Pago de nómina a los ayudantes, transporte, reparaciones, luz, o la compra de bolsas extra que no estaban en la fórmula.'
+      },
+      'capital': {
+        titulo: 'Capital (Inventario)',
+        desc: 'Es el valor total de la mercancía y materia prima que tienes guardada en el almacén en este momento.',
+        ejemplo: 'Si tienes 10 sacos de harina en stock que compraste a $40 cada uno, tienes $400 "congelados" en forma de capital de inventario.'
+      },
+      'por-cobrar': {
+        titulo: 'Crédito (A favor)',
+        desc: 'Es el dinero total que tus clientes te deben por productos que se llevaron y no te pagaron al instante.',
+        ejemplo: 'Las facturas pendientes de la bodega de la esquina que se llevó 50 panes campesinos y te los paga a final de semana.'
+      },
+      'ingresos': {
+        titulo: 'Ingresos Brutos',
+        desc: 'Es la suma total del dinero que ha generado el negocio por ventas, antes de descontar los gastos ni el costo de la harina.',
+        ejemplo: 'Si a lo largo del mes has vendido 500 unidades de pan a $1, tu ingreso bruto es $500, sin importar cuánto costó fabricarlos.'
+      },
+      'costos': {
+        titulo: 'Costo de Ventas',
+        desc: 'Es lo que te costó producir EXCLUSIVAMENTE los productos que ya lograste vender.',
+        ejemplo: 'Si compraste $200 en harina, pero hoy solo vendiste 50 panes, tu costo de venta es exactamente lo que costó la harina, azúcar y manteca que usaste para esos 50 panes, no los $200 enteros.'
+      }
+    };
+
+    window.abrirInfoFinanzas = (tipo) => {
+      const info = INFO_FINANZAS[tipo];
+      if (!info) return;
+      document.getElementById('titulo-info-finanzas').innerHTML = `<i class="fas fa-info-circle" style="color:#4A3628; margin-right:8px;"></i> ${info.titulo}`;
+      document.getElementById('desc-info-finanzas').textContent = info.desc;
+      document.getElementById('ejemplo-info-finanzas').textContent = info.ejemplo;
+      document.getElementById('modal-info-finanzas').classList.add('active');
+    };
 
     const PRODUCTOS_INICIALES = [
       { nombre: "Harina", cantidad: 0, unidad: "sacos", costo: 38.5, precio: 0, paqueteCantidad: 0 },
@@ -743,7 +857,7 @@
       { nombre: "Catalinas pequeñas sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.2, paqueteCantidad: 0 },
       { nombre: "Paquete Roscas pequeñas 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.5, paqueteCantidad: 0 },
       { nombre: "Roscas pequeñas sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.2, paqueteCantidad: 0 },
-      { nombre: "Paquete Pan andino 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 4.0, paqueteCantidad: 0 },
+      { nombre: "Paquete Pan andino 1kg", quantity: 0, unidad: "unidades", costo: 0, precio: 4.0, paqueteCantidad: 0 },
       { nombre: "Pan andino sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 2.0, paqueteCantidad: 0 },
       { nombre: "Paquete Pan de guayaba 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 4.0, paqueteCantidad: 0 },
       { nombre: "Pan de guayaba sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.5, paqueteCantidad: 0 },
@@ -955,6 +1069,7 @@
 
     let productos = [], recetas = [], ventas = [], clientes = [], gastos = [], compras = [], producciones = [], empleados = [], proveedores = [];
     let recetaActual = null, prodEditando = null, productoVentaSeleccionado = null, clienteAbonoActual = null, proveedorAbonoActual = null;
+    let clienteFiarActual = null, productoFiarSeleccionado = null; 
     let ultimaActualizacionLocal = null;
     let ingredientesTemporales = [];
     let bcvRate = 0;
@@ -1525,17 +1640,9 @@
       }
       const costoPorPaquete = paquetes > 0 ? (costoTotalReceta / paquetes) : 0;
       const costoPorUnidadSuelta = totalUnidades > 0 ? (costoTotalReceta / totalUnidades) : 0;
-      if (recetaActual.productoResultante.tipo === 'compuesto') {
-         const pPaq = encontrarProducto(recetaActual.productoResultante.paquete.nombre);
-         if (pPaq && paquetes > 0) pPaq.costo = costoPorPaquete;
-         const pSuelto = encontrarProducto(recetaActual.productoResultante.suelto.nombre);
-         if (pSuelto && totalUnidades > 0) pSuelto.costo = costoPorUnidadSuelta;
-      } else {
-         const pSuelto = encontrarProducto(recetaActual.productoResultante.suelto.nombre);
-         if (pSuelto && totalUnidades > 0) pSuelto.costo = costoPorUnidadSuelta;
-      }
+      
       html += `<div class="costo-destacado">Total Costo Inversión: ${formatearDinero(costoTotalReceta)}</div>`;
-      if(paquetes > 0) html += `<div style="text-align:center; font-size:13px; color:#8e8e93; margin-top:10px;">Costo de hacer 1 paquete: ${formatearDinero(costoPorPaquete)}</div>`;
+      if(paquetes > 0) html += `<div style="text-align:center; font-size:13px; color:#8e8e93; margin-top:10px;">Costo estimado por paquete: ${formatearDinero(costoPorPaquete)}</div>`;
       document.getElementById('receta-dinamica').innerHTML = html;
       
       let resumen = `<i class="fas fa-cookie"></i> Producción Total: <strong>${totalUnidades.toFixed(0)} unid.</strong>`;
@@ -1601,12 +1708,16 @@
           productos.push(pPaq);
         }
         pPaq.cantidad += paquetes;
+        if (paquetes > 0) pPaq.costo = costoProduccion / paquetes;
+        
         let pSuel = encontrarProducto(recetaActual.productoResultante.suelto.nombre);
         if (!pSuel) { 
           pSuel = { nombre: recetaActual.productoResultante.suelto.nombre, cantidad: 0, unidad: 'unidades', costo: 0, precio: 0, paqueteCantidad: 0 };
           productos.push(pSuel);
         }
-        pSuel.cantidad += totalUnidades % up;
+        const sueltasGeneradas = totalUnidades % up;
+        pSuel.cantidad += sueltasGeneradas;
+        if (sueltasGeneradas > 0) pSuel.costo = costoProduccion / totalUnidades;
       } else {
         let pSuel = encontrarProducto(recetaActual.productoResultante.suelto.nombre);
         if (!pSuel) { 
@@ -1614,6 +1725,7 @@
           productos.push(pSuel);
         }
         pSuel.cantidad += totalUnidades;
+        pSuel.costo = costoProduccion / totalUnidades;
       }
       
       producciones.push({
@@ -1761,7 +1873,7 @@
       recetaSelect.innerHTML = recetas.map(r => `<option value="${r.id}">${r.nombre}</option>`).join('');
     }
 
-    // ---------- VENTAS ----------
+    // ---------- VENTAS PRINCIPALES ----------
     function renderizarGridVentas(filtro = '') {
       const grid = document.getElementById('grid-venta-directa');
       let vendibles = productos.filter(p => esProductoFinal(p.nombre));
@@ -1934,6 +2046,7 @@
       const precioTotalVenta = cant * precioUnitario;
       const costoTotalVenta = cant * productoVentaSeleccionado.costo;
       productoVentaSeleccionado.cantidad -= cant;
+      
       if(tipo === 'contado') {
          ventas.unshift({
             id: Date.now(), fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
@@ -1946,12 +2059,15 @@
          let cli = clientes.find(c => c.id == clienteId);
          if (!cli) { mostrarToast('Cliente no encontrado'); return; }
          cli.deuda += precioTotalVenta;
+         
          ventas.unshift({
             id: Date.now(), fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
             producto: productoVentaSeleccionado.nombre + ' (Fiado a ' + cli.nombre + ')',
-            cantidad: cant, ingreso: 0, costo: costoTotalVenta, ganancia: -costoTotalVenta
+            cantidad: cant, ingreso: 0, costo: costoTotalVenta, ganancia: -costoTotalVenta,
+            deudaGenerada: precioTotalVenta
          });
       }
+      
       guardarDatos(); renderizarProductos(); renderizarGridVentas(); renderizarClientes();
       document.getElementById('modal-tipo-venta').classList.remove('active');
       document.getElementById('cantidad-venta').value = 1;
@@ -1982,7 +2098,7 @@
       mostrarToast(`✅ Cliente "${nuevoCliente.nombre}" creado y seleccionado`);
     });
 
-    // ---------- CLIENTES ----------
+    // ---------- CLIENTES Y FIAR DIRECTO ----------
     function renderizarClientes() {
       const lista = document.getElementById('lista-clientes');
       if(clientes.length === 0) {
@@ -2024,33 +2140,216 @@
       }).join('');
     }
 
+    // Historial Mejorado con Botones Directos
     window.verHistorialCliente = (clienteId) => {
       const cli = clientes.find(c => c.id === clienteId);
       if (!cli) return;
+      
       const movimientos = ventas.filter(v => 
         v.producto.includes('(Fiado a ' + cli.nombre + ')') || 
         v.producto.startsWith('Abono de deuda - ' + cli.nombre)
       );
-      document.getElementById('historial-titulo').textContent = 'Historial: ' + cli.nombre;
+      
+      let totalConsumido = 0;
+      let totalPagado = 0;
+
+      movimientos.forEach(m => {
+        if (m.producto.startsWith('Abono')) {
+          totalPagado += m.ingreso;
+        } else {
+          totalConsumido += (m.deudaGenerada || m.costo);
+        }
+      });
+      
+      document.getElementById('historial-titulo').innerHTML = '<i class="fas fa-file-invoice-dollar" style="color:#4A3628; margin-right:8px;"></i> Estado de Cuenta';
       const lista = document.getElementById('lista-historial-cliente');
+      
+      let html = `
+        <div style="text-align: center; margin-bottom: 24px;">
+          <h3 style="font-size: 22px; color: #2C2420; margin-bottom: 14px;">${cli.nombre}</h3>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div style="background: #FEF2F2; padding: 14px; border-radius: 16px; border: 1px solid #FECACA;">
+              <span style="font-size: 11px; color: #DC2626; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Total Fiado</span>
+              <div style="font-size: 18px; font-weight: 700; color: #991B1B; margin-top: 4px;">${formatearDinero(totalConsumido)}</div>
+            </div>
+            <div style="background: #F0FDF4; padding: 14px; border-radius: 16px; border: 1px solid #BBF7D0;">
+              <span style="font-size: 11px; color: #16A34A; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Total Abonado</span>
+              <div style="font-size: 18px; font-weight: 700; color: #166534; margin-top: 4px;">${formatearDinero(totalPagado)}</div>
+            </div>
+          </div>
+
+          <div style="background: #FCFAF8; padding: 18px; border-radius: 18px; border: 1px solid #EBE6E0; display: flex; flex-direction: column; align-items: stretch; gap: 16px;">
+            <div style="text-align: center;">
+              <p style="font-size:13px; color:#8e8e93; margin-bottom:4px; font-weight:600;">Deuda Actual Pendiente</p>
+              <h3 style="font-size:32px; color:#DC2626; margin:0;">${formatearDinero(cli.deuda)}</h3>
+            </div>
+            
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-outline" style="padding: 12px; font-size: 14px; border-radius: 14px; flex: 1;" 
+                      onclick="abrirModalFiarDirecto(${cli.id});">
+                <i class="fas fa-cart-plus"></i> Fiar
+              </button>
+              <button class="btn" style="background:#16A34A; padding: 12px 18px; font-size: 14px; border-radius: 14px; flex: 1;" 
+                      onclick="document.getElementById('modal-historial-cliente').classList.remove('active'); abrirModalAbono(${cli.id});">
+                <i class="fas fa-hand-holding-usd"></i> Abonar
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <h4 style="color:#2C2420; font-size:15px; margin-bottom: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Detalle de Movimientos</h4>
+      `;
+
       if (movimientos.length === 0) {
-        lista.innerHTML = '<li class="product-item" style="color:#8e8e93; text-align:center; display:block;">Sin movimientos registrados.</li>';
+        html += '<div style="color:#8e8e93; text-align:center; padding:30px 20px; background: #FCFAF8; border-radius: 16px; border: 1px dashed #EBE6E0;">No hay movimientos registrados para este cliente.</div>';
       } else {
-        lista.innerHTML = movimientos.map(m => `
-          <li class="product-item">
-            <div>
-              <strong style="color:#2C2420;">${m.producto}</strong><br>
-              <small style="color:#8e8e93;">${m.fecha}</small>
+        html += movimientos.map(m => {
+          const esAbono = m.producto.startsWith('Abono');
+          const nombreProductoReal = m.producto.split(' (Fiado')[0].replace('Abono de deuda - ' + cli.nombre, 'Pago recibido');
+          
+          let iconoCantidad = '';
+          let montoTexto = '';
+          let colorMonto = '';
+          let badgeTexto = '';
+
+          if (esAbono) {
+            iconoCantidad = `<div style="background:#F0FDF4; color:#16A34A; width:32px; height:32px; border-radius:10px; display:flex; align-items:center; justify-content:center; margin-right:12px; font-size:14px;"><i class="fas fa-arrow-down"></i></div>`;
+            montoTexto = '+' + formatearDinero(m.ingreso);
+            colorMonto = '#16A34A';
+            badgeTexto = 'Abono';
+          } else {
+            iconoCantidad = `<div style="background:#F0ECE9; color:#4A3628; width:32px; height:32px; border-radius:10px; display:flex; align-items:center; justify-content:center; margin-right:12px; font-size:13px; font-weight:700;">${m.cantidad}x</div>`;
+            const deudaValor = m.deudaGenerada || m.costo; 
+            montoTexto = '-' + formatearDinero(deudaValor);
+            colorMonto = '#2C2420'; 
+            badgeTexto = 'Consumo';
+          }
+
+          return `
+          <div style="display:flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #F4EFEA;">
+            <div style="display:flex; align-items: center; flex:1;">
+              ${iconoCantidad}
+              <div>
+                <div style="color:#2C2420; font-size:15px; font-weight:600; margin-bottom:2px;">
+                  ${nombreProductoReal}
+                </div>
+                <div style="display:flex; gap: 8px; align-items: center;">
+                  <small style="color:#8e8e93; font-weight:500;">${m.fecha}</small>
+                  <span style="font-size:10px; background:${esAbono ? '#DCFCE7' : '#F3F4F6'}; color:${esAbono ? '#166534' : '#4B5563'}; padding: 2px 6px; border-radius: 6px; font-weight: 700; text-transform: uppercase;">${badgeTexto}</span>
+                </div>
+              </div>
             </div>
-            <div style="font-weight:700; color:${m.ingreso > 0 ? '#16A34A' : '#DC2626'}">
-              ${m.ingreso > 0 ? '+' + formatearDinero(m.ingreso) : formatearDinero(m.costo)}
+            <div style="font-weight:700; color:${colorMonto}; font-size: 16px; text-align:right;">
+              ${montoTexto}
             </div>
-          </li>
-        `).join('');
+          </div>
+        `}).join('');
       }
+      
+      lista.innerHTML = html;
       document.getElementById('modal-historial-cliente').classList.add('active');
     };
 
+    // Funciones del Nuevo Modal de Fiar Directo
+    window.abrirModalFiarDirecto = (clienteId) => {
+      clienteFiarActual = clientes.find(c => c.id === clienteId);
+      if(!clienteFiarActual) return;
+      
+      document.getElementById('fiar-nombre-cliente').textContent = clienteFiarActual.nombre;
+      renderizarGridFiarDirecto();
+      
+      volverGridFiar(); // Asegura que siempre abre mostrando el grid
+      document.getElementById('modal-fiar-directo').classList.add('active');
+    };
+
+    function renderizarGridFiarDirecto(filtro = '') {
+      const grid = document.getElementById('grid-fiar-directo');
+      // Filtro mágico: solo productos finales y que tengan stock >= 1
+      let vendibles = productos.filter(p => esProductoFinal(p.nombre) && p.cantidad >= 1);
+      
+      if (filtro) {
+        const term = filtro.toLowerCase();
+        vendibles = vendibles.filter(p => p.nombre.toLowerCase().includes(term));
+      }
+      
+      if (vendibles.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #8e8e93; padding: 20px;">No hay productos con stock disponible para fiar.</div>';
+        return;
+      }
+      
+      grid.innerHTML = vendibles.map(p => {
+        let icono = p.nombre.toLowerCase().includes('pan') ? 'fa-bread-slice' : 'fa-box-open';
+        if(p.nombre.toLowerCase().includes('suelta')) icono = 'fa-cookie';
+        return `
+          <div class="grid-card" onclick="seleccionarProductoFiar('${p.nombre}')">
+            <i class="fas ${icono}"></i>
+            <div class="name">${p.nombre}</div>
+            <div class="stock">${p.cantidad} disp.</div>
+            <div style="font-weight:700; color:#16A34A; margin-top:6px;">${formatearDinero(p.precio)}</div>
+          </div>`;
+      }).join('');
+    }
+
+    document.getElementById('buscar-venta-fiar').addEventListener('input', e => renderizarGridFiarDirecto(e.target.value));
+
+    window.seleccionarProductoFiar = (nombre) => {
+      productoFiarSeleccionado = encontrarProducto(nombre);
+      document.getElementById('lbl-fiar-producto').textContent = productoFiarSeleccionado.nombre;
+      document.getElementById('lbl-fiar-stock').textContent = `Stock disponible: ${productoFiarSeleccionado.cantidad} | Precio Referencia: ${formatearDinero(productoFiarSeleccionado.precio)}`;
+      document.getElementById('input-fiar-precio').value = productoFiarSeleccionado.precio;
+      document.getElementById('fiar-cantidad').value = 1;
+      
+      document.getElementById('contenedor-grid-fiar').style.display = 'none';
+      document.getElementById('fiar-producto-seleccionado').style.display = 'block';
+    };
+
+    window.volverGridFiar = () => {
+      document.getElementById('contenedor-grid-fiar').style.display = 'block';
+      document.getElementById('fiar-producto-seleccionado').style.display = 'none';
+      productoFiarSeleccionado = null;
+    };
+
+    document.getElementById('btn-confirmar-fiar').addEventListener('click', () => {
+      if(!productoFiarSeleccionado || !clienteFiarActual) return;
+      
+      const cant = parseInt(document.getElementById('fiar-cantidad').value);
+      const precioUnitario = parseFloat(document.getElementById('input-fiar-precio').value) || 0;
+      
+      if(isNaN(cant) || cant <= 0) return;
+      if(productoFiarSeleccionado.cantidad < cant) { mostrarToast('Stock insuficiente', 2000); return; }
+      if(precioUnitario <= 0) { mostrarToast('El precio debe ser mayor a 0', 2000); return; }
+      
+      const precioTotalVenta = cant * precioUnitario;
+      const costoTotalVenta = cant * productoFiarSeleccionado.costo;
+      
+      // Descontar stock
+      productoFiarSeleccionado.cantidad -= cant;
+      
+      // Sumar deuda al cliente
+      clienteFiarActual.deuda += precioTotalVenta;
+      
+      // Registrar en ventas
+      ventas.unshift({
+        id: Date.now(), fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
+        producto: productoFiarSeleccionado.nombre + ' (Fiado a ' + clienteFiarActual.nombre + ')',
+        cantidad: cant, ingreso: 0, costo: costoTotalVenta, ganancia: -costoTotalVenta,
+        deudaGenerada: precioTotalVenta
+      });
+      
+      guardarDatos(); 
+      renderizarProductos(); 
+      renderizarGridVentas(); 
+      renderizarClientes();
+      
+      // Actualizar vista del historial en tiempo real
+      verHistorialCliente(clienteFiarActual.id);
+      
+      document.getElementById('modal-fiar-directo').classList.remove('active');
+      mostrarToast(`✅ ${cant}x ${productoFiarSeleccionado.nombre} fiado a ${clienteFiarActual.nombre}`);
+    });
+
+    // Modal de Abonos existente...
     window.abrirModalAbono = (clienteId) => {
       clienteAbonoActual = clientes.find(c => c.id === clienteId);
       document.getElementById('lbl-abono-cliente').textContent = clienteAbonoActual.nombre;
@@ -2278,6 +2577,10 @@
       const totalPorCobrar = clientes.reduce((acc, cli) => acc + (cli.deuda || 0), 0);
       const totalDeudaProv = proveedores.reduce((acc, p) => acc + (p.deuda || 0), 0);
 
+      function setTextSafe(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = formatearDinero(value);
+      }
       setTextSafe('fin-caja', cajaReal);
       setTextSafe('fin-por-pagar', totalDeudaProv);
       setTextSafe('fin-ganancia', gananciaNeta);
@@ -2291,11 +2594,6 @@
       if(finCajaEl) finCajaEl.style.color = cajaReal >= 0 ? '#16A34A' : '#DC2626';
       const finGananciaEl = document.getElementById('fin-ganancia');
       if(finGananciaEl) finGananciaEl.style.color = gananciaNeta >= 0 ? '#16A34A' : '#DC2626';
-
-      function setTextSafe(id, value) {
-        const el = document.getElementById(id);
-        if (el) el.textContent = formatearDinero(value);
-      }
     }
 
     function renderizarGastos() {
@@ -2605,7 +2903,7 @@
         id: Date.now() + Math.random(),
         descripcion: `Nómina: ${emp.nombre} (${emp.cargo})`,
         monto: emp.sueldo,
-        esPagoDeuda: false, // Las nóminas SÍ afectan la ganancia y la caja
+        esPagoDeuda: false, 
         fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'})
       });
 
