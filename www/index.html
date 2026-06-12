@@ -277,6 +277,8 @@
         <h3><i class="fas fa-cookie-bite"></i> Producir Lote</h3>
         <div style="display: flex; gap: 8px;">
           <button class="icon-btn" id="btn-agregar-receta" style="background: #4A3628; color: white; width: 40px; height: 40px;"><i class="fas fa-plus"></i></button>
+          <!-- 🔧 NUEVO: Botón para editar receta existente (solo las creadas por el usuario) -->
+          <button class="icon-btn" id="btn-editar-receta" style="background: #4A3628; color: white; width: 40px; height: 40px;" disabled title="Selecciona una receta creada por ti para editar"><i class="fas fa-edit"></i></button>
           <button class="icon-btn danger" id="btn-eliminar-receta" style="width: 40px; height: 40px;"><i class="fas fa-trash"></i></button>
         </div>
       </div>
@@ -1077,6 +1079,9 @@
     let sincronizando = false;
     let papeleraVentas = [], papeleraGastos = [];
     let clientesSeleccionadosFusion = [];
+    
+    // 🔧 NUEVO: Variable para saber si estamos editando una receta existente
+    let recetaEditandoId = null;
 
     const toastEl = document.getElementById('toast');
     function mostrarToast(texto, duracion = 2500) {
@@ -1299,7 +1304,8 @@
           recetaActual = recetas[0]; 
           const sel = document.getElementById('receta-select');
           if(sel) sel.value = recetaActual.id;
-          actualizarVistaReceta(); 
+          actualizarVistaReceta();
+          actualizarEstadoBotonEditar(); // 🔧 NUEVO
         }
       }
     }
@@ -1767,6 +1773,7 @@
 
     document.getElementById('btn-agregar-receta').addEventListener('click', () => {
       ingredientesTemporales = [];
+      recetaEditandoId = null; // Asegurar que no estamos en modo edición
       document.getElementById('receta-nombre').value = '';
       document.getElementById('receta-unidad').value = 'latas';
       document.getElementById('receta-unidades-por-lata').value = 40;
@@ -1774,11 +1781,63 @@
       actualizarTotalUnidadesBase();
       document.getElementById('receta-unidades-paquete').value = '';
       renderizarIngredientesTemporales();
+      document.querySelector('#modal-receta .modal-title').textContent = '➕ Nueva receta';
+      document.getElementById('modal-receta').classList.add('active');
+    });
+
+    // 🔧 NUEVO: Función para habilitar/deshabilitar el botón editar según el tipo de receta
+    function actualizarEstadoBotonEditar() {
+      const btnEdit = document.getElementById('btn-editar-receta');
+      if (!btnEdit) return;
+      if (recetaActual && recetaActual.id.startsWith('receta_')) {
+        btnEdit.disabled = false;
+        btnEdit.style.opacity = '1';
+        btnEdit.title = 'Editar receta';
+      } else {
+        btnEdit.disabled = true;
+        btnEdit.style.opacity = '0.5';
+        btnEdit.title = 'No se pueden editar recetas predefinidas';
+      }
+    }
+
+    // 🔧 NUEVO: Listener para el botón Editar receta
+    document.getElementById('btn-editar-receta').addEventListener('click', () => {
+      if (!recetaActual) return;
+      if (!recetaActual.id.startsWith('receta_')) {
+        mostrarToast('Las recetas predefinidas no se pueden editar', 2000);
+        return;
+      }
+      
+      // Precargar los datos de la receta en el formulario
+      document.getElementById('receta-nombre').value = recetaActual.nombre;
+      document.getElementById('receta-unidad').value = recetaActual.unidadProduccion;
+      document.getElementById('receta-unidades-por-lata').value = recetaActual.unidadesPorLata;
+      document.getElementById('receta-latas-base').value = recetaActual.latasBase;
+      actualizarTotalUnidadesBase();
+      
+      // Empaque
+      const pr = recetaActual.productoResultante;
+      if (pr.tipo === 'compuesto') {
+        document.getElementById('receta-unidades-paquete').value = pr.paquete.unidadesPorPaquete;
+        document.getElementById('receta-bolsa').value = pr.insumoEmpaque ? pr.insumoEmpaque.nombre : '';
+      } else {
+        document.getElementById('receta-unidades-paquete').value = '';
+        document.getElementById('receta-bolsa').value = '';
+      }
+      
+      // Ingredientes temporales (copia profunda para no modificar el original accidentalmente)
+      ingredientesTemporales = JSON.parse(JSON.stringify(recetaActual.ingredientes));
+      renderizarIngredientesTemporales();
+      
+      recetaEditandoId = recetaActual.id;  // Marcamos que estamos editando
+      document.querySelector('#modal-receta .modal-title').textContent = '✏️ Editar receta';
       document.getElementById('modal-receta').classList.add('active');
     });
 
     document.getElementById('cerrar-modal-receta').addEventListener('click', () => {
       document.getElementById('modal-receta').classList.remove('active');
+      recetaEditandoId = null;
+      document.querySelector('#modal-receta .modal-title').textContent = '➕ Nueva receta';
     });
 
     function renderizarIngredientesTemporales() {
@@ -1820,7 +1879,9 @@
       for (let ing of ingredientesTemporales) {
         if (!ing.nombre || isNaN(ing.cantidad) || ing.cantidad <= 0) { mostrarToast('Completa todos los ingredientes', 1500); return; }
       }
-      const id = 'receta_' + Date.now();
+      
+      // 🔧 NUEVO: Si estamos editando, conservamos el ID original; si no, generamos uno nuevo
+      const id = recetaEditandoId || ('receta_' + Date.now());
       const paqueteUnidades = document.getElementById('receta-unidades-paquete').value;
       const bolsaSeleccionada = document.getElementById('receta-bolsa').value;
       let productoResultante;
@@ -1841,21 +1902,36 @@
         if (!productos.some(p => p.nombre === nombreSuelto)) productos.push({ nombre: nombreSuelto, cantidad: 0, unidad: 'unidades', costo:0, precio:0, paqueteCantidad: 0 });
         productoResultante = { tipo: 'simple', suelto: { nombre: nombreSuelto } };
       }
+      
       const nuevaReceta = {
         id, nombre, unidadProduccion: unidad,
         unidadesPorLata, latasBase,
         ingredientes: ingredientesTemporales.map(ing => ({ ...ing })),
         productoResultante
       };
-      recetas.push(nuevaReceta);
+      
+      // 🔧 NUEVO: Reemplazar o agregar según corresponda
+      if (recetaEditandoId) {
+        const idx = recetas.findIndex(r => r.id === recetaEditandoId);
+        if (idx !== -1) {
+          recetas[idx] = nuevaReceta;
+          mostrarToast(`✅ Receta "${nombre}" actualizada`, 2000);
+        }
+        recetaEditandoId = null;
+      } else {
+        recetas.push(nuevaReceta);
+        mostrarToast(`✅ Receta "${nombre}" creada`, 2000);
+      }
+      
       guardarDatos();
       llenarSelectorRecetas();
       document.getElementById('receta-select').value = id;
       recetaActual = nuevaReceta;
       actualizarVistaReceta();
+      actualizarEstadoBotonEditar(); // 🔧 NUEVO
       renderizarProductos();
       document.getElementById('modal-receta').classList.remove('active');
-      mostrarToast(`✅ Receta "${nombre}" creada`, 2000);
+      document.querySelector('#modal-receta .modal-title').textContent = '➕ Nueva receta';
     });
 
     document.getElementById('btn-eliminar-receta').addEventListener('click', () => {
@@ -1866,12 +1942,20 @@
       if (recetas.length) recetaActual = recetas[0]; else recetaActual = null;
       llenarSelectorRecetas();
       actualizarVistaReceta();
+      actualizarEstadoBotonEditar(); // 🔧 NUEVO
     });
 
     function llenarSelectorRecetas() {
       const recetaSelect = document.getElementById('receta-select');
       recetaSelect.innerHTML = recetas.map(r => `<option value="${r.id}">${r.nombre}</option>`).join('');
     }
+
+    // Modificar el listener del selector de recetas para que actualice el botón editar
+    document.getElementById('receta-select').addEventListener('change', (e) => { 
+      recetaActual = recetas.find(r => r.id === e.target.value); 
+      actualizarVistaReceta();
+      actualizarEstadoBotonEditar(); // 🔧 NUEVO
+    });
 
     // ---------- VENTAS PRINCIPALES ----------
     function renderizarGridVentas(filtro = '') {
@@ -2725,7 +2809,8 @@
     document.getElementById('buscar-producto').addEventListener('input', e => renderizarProductos(e.target.value));
     document.getElementById('receta-select').addEventListener('change', (e) => { 
       recetaActual = recetas.find(r => r.id === e.target.value); 
-      actualizarVistaReceta(); 
+      actualizarVistaReceta();
+      actualizarEstadoBotonEditar(); // 🔧 NUEVO
     });
     document.getElementById('cantidad-produccion').addEventListener('input', actualizarVistaReceta);
 
