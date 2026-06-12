@@ -1,7 +1,7 @@
 {
-  "name": "almacen-pro",
+  "name": "panificadora-genaro",
   "version": "1.0.0",
-  "description": "Almacén Pro - Gestión de panificadora",
+  "description": "Gestión de Panificadora Genaro",
   "scripts": {
     "cap:add": "npx cap add android",
     "cap:copy": "npx cap copy",
