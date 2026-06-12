@@ -4,13 +4,15 @@
   "description": "Almacén Pro - Gestión de panificadora",
   "scripts": {
     "cap:add": "npx cap add android",
-    "cap:copy": "npx cap copy"
+    "cap:copy": "npx cap copy",
+    "generate:assets": "capacitor-assets generate"
   },
   "dependencies": {
     "@capacitor/core": "^5.6.0",
     "@capacitor/android": "^5.6.0"
   },
   "devDependencies": {
-    "@capacitor/cli": "^5.6.0"
+    "@capacitor/cli": "^5.6.0",
+    "@capacitor/assets": "^3.0.0"
   }
 }
