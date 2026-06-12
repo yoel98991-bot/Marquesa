@@ -3,7 +3,7 @@ name: Build Android APK
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:   # permite ejecutar manualmente desde GitHub
+  workflow_dispatch:
 
 jobs:
   build:
@@ -35,6 +35,9 @@ jobs:
 
       - name: Añadir plataforma Android
         run: npx cap add android
+
+      - name: Generar iconos de la aplicación
+        run: npx capacitor-assets generate --android
 
       - name: Copiar recursos web
         run: npx cap copy
