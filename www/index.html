@@ -46,7 +46,6 @@
     }
     .app-container { max-width: 500px; margin: 0 auto; background: #F8F6F4; min-height: 100vh; position: relative; }
     
-    /* Bottom Navigation */
     .bottom-nav {
       position: fixed; bottom: 0; left: 0; right: 0;
       background: rgba(255,255,255,0.95); backdrop-filter: blur(20px);
@@ -66,7 +65,6 @@
     .section.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     
-    /* Tarjetas y Contenedores */
     .card {
       background: #ffffff; border-radius: 24px; padding: 22px; margin-bottom: 20px;
       box-shadow: 0 4px 20px rgba(44, 36, 32, 0.04); border: 1px solid #EBE6E0;
@@ -75,7 +73,6 @@
     .card-header h3 { font-size: 19px; font-weight: 700; color: #2C2420; }
     .badge { background: #F0ECE9; color: #4A3628; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; }
     
-    /* Listas y Elementos */
     .product-list { list-style: none; }
     .product-item {
       display: flex; align-items: center; justify-content: space-between;
@@ -97,7 +94,6 @@
     .icon-btn:active { background: #E0D6D0; transform: scale(0.92); }
     .icon-btn.danger { color: #DC2626; background: #FCE8E8; }
     
-    /* Formularios y Botones */
     .input-field, .select-unit {
       background: #FCFAF8; border: 1px solid #EBE6E0; border-radius: 16px;
       padding: 16px 18px; font-size: 16px; font-family: inherit; outline: none; transition: 0.2s; width: 100%; color: #2C2420;
@@ -114,7 +110,6 @@
     
     .flex-row { display: flex; align-items: center; gap: 12px; }
 
-    /* Recetas */
     .recipe-box { background: #FCFAF8; border-radius: 18px; padding: 18px; margin: 18px 0; border: 1px solid #EBE6E0; }
     .recipe-title { font-weight: 700; margin-bottom: 14px; font-size: 16px; color: #2C2420; }
     .ingredient-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px dashed #D6CCC4; font-size: 15px; }
@@ -123,7 +118,6 @@
     .ingredient-selector-item { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
     .delete-btn { background: #DC2626; color: white; border: none; width: 40px; height: 40px; border-radius: 20px; font-size: 16px; cursor: pointer; }
 
-    /* Modales */
     .modal-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(28, 20, 18, 0.6);
       backdrop-filter: blur(6px); display: flex; align-items: flex-end; justify-content: center;
@@ -140,7 +134,6 @@
     .modal-title { font-size: 22px; font-weight: 700; color: #2C2420; }
     .close-modal { background: #F8F6F4; border: none; width: 40px; height: 40px; border-radius: 20px; font-size: 18px; color: #8e8e93; cursor: pointer; }
     
-    /* Grid Visual */
     .visual-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 18px; }
     .grid-card {
       background: #FCFAF8; border: 2px solid #EBE6E0; border-radius: 20px; padding: 20px 14px;
@@ -151,7 +144,6 @@
     .grid-card .name { font-weight: 600; font-size: 15px; color: #2C2420; margin-bottom: 6px; line-height: 1.2; }
     .grid-card .stock { font-size: 14px; color: #8e8e93; font-weight: 500; }
     
-    /* Finanzas */
     .finanzas-dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
     .dash-card { 
       background: #fff; padding: 18px; border-radius: 20px; border: 1px solid #EBE6E0; 
@@ -173,7 +165,6 @@
     .venta-info p { font-size: 13px; color: #8e8e93; }
     .venta-monto { font-weight: 700; color: #34c759; font-size: 16px; }
 
-    /* Estilos para Radio Buttons */
     .radio-group { display: flex; gap: 12px; margin-bottom: 20px; }
     .radio-option {
       flex: 1; background: #FCFAF8; border: 2px solid #EBE6E0; border-radius: 16px; padding: 16px;
@@ -534,6 +525,16 @@
       <label style="font-weight: 600; display: block; margin-bottom: 10px; color:#2C2420;">Monto que está pagando (Bs):</label>
       <input type="number" id="input-monto-abono" class="input-field" placeholder="Ej: 500.00" step="0.01" style="margin-bottom: 10px;" oninput="actualizarEquivalenteDolarAbono()">
       <p id="abono-dolar-equivalente" style="font-size: 14px; color: #8e8e93; margin-bottom: 20px; font-weight:500;">Equivale a: $0.00</p>
+
+      <div style="background: #FEF2F2; padding: 16px; border-radius: 16px; margin: 20px 0; border: 1px solid #FECACA;">
+        <label style="display:flex; align-items:center; gap:12px; font-size:15px; color:#991B1B; font-weight:600; cursor:pointer;">
+          <input type="checkbox" id="check-deuda-antigua" style="width:22px; height:22px; accent-color:#DC2626;">
+          <span><i class="fas fa-exclamation-triangle"></i> Es una deuda antigua (sin ganancia previa registrada)</span>
+        </label>
+        <p style="font-size:12px; color:#DC2626; margin-top:8px; margin-left:34px;">
+          Marca esta casilla solo si la venta original no generó ganancia (por ser anterior a la actualización o por limpieza de historial).
+        </p>
+      </div>
 
       <button class="btn" id="btn-confirmar-abono">Guardar Abono</button>
     </div>
@@ -2468,6 +2469,7 @@
       document.getElementById('lbl-abono-deuda-bs').textContent = `(Bs. ${deudaBs})`;
       document.getElementById('input-monto-abono').value = '';
       document.getElementById('abono-dolar-equivalente').textContent = 'Equivale a: $0.00';
+      document.getElementById('check-deuda-antigua').checked = false; // Siempre inicia desmarcado
       document.getElementById('modal-abono').classList.add('active');
     };
 
@@ -2492,11 +2494,20 @@
         return; 
       }
       clienteAbonoActual.deuda = Math.round((clienteAbonoActual.deuda - montoDolares) * 100) / 100;
+      
+      const esDeudaAntigua = document.getElementById('check-deuda-antigua')?.checked || false;
+      const gananciaAbono = esDeudaAntigua ? montoDolares : 0;
+      
       ventas.unshift({
-         id: Date.now(), fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
-         producto: 'Abono de deuda - ' + clienteAbonoActual.nombre,
-         cantidad: 1, ingreso: montoDolares, costo: 0, ganancia: 0
+         id: Date.now(), 
+         fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
+         producto: 'Abono de deuda - ' + clienteAbonoActual.nombre + (esDeudaAntigua ? ' (Deuda antigua)' : ''),
+         cantidad: 1, 
+         ingreso: montoDolares, 
+         costo: 0, 
+         ganancia: gananciaAbono
       });
+      
       guardarDatos(); renderizarClientes();
       if (document.getElementById('finanzas').classList.contains('active')) renderizarFinanzas();
       document.getElementById('modal-abono').classList.remove('active');
