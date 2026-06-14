@@ -277,7 +277,6 @@
         <h3><i class="fas fa-cookie-bite"></i> Producir Lote</h3>
         <div style="display: flex; gap: 8px;">
           <button class="icon-btn" id="btn-agregar-receta" style="background: #4A3628; color: white; width: 40px; height: 40px;"><i class="fas fa-plus"></i></button>
-          <!-- 🔧 NUEVO: Botón para editar receta existente (solo las creadas por el usuario) -->
           <button class="icon-btn" id="btn-editar-receta" style="background: #4A3628; color: white; width: 40px; height: 40px;" disabled title="Selecciona una receta creada por ti para editar"><i class="fas fa-edit"></i></button>
           <button class="icon-btn danger" id="btn-eliminar-receta" style="width: 40px; height: 40px;"><i class="fas fa-trash"></i></button>
         </div>
@@ -415,7 +414,7 @@
     </div>
   </section>
 
-  <!-- MODALES EXISTENTES -->
+  <!-- MODALES -->
   <div class="modal-overlay" id="modal-receta">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -484,6 +483,10 @@
           <input type="radio" name="tipo-venta" value="fiado">
           <i class="fas fa-book" style="font-size:20px; margin-bottom:6px;"></i><br>A Crédito (Fiado)
         </label>
+        <label class="radio-option" id="opt-anticipo">
+          <input type="radio" name="tipo-venta" value="anticipo">
+          <i class="fas fa-calendar-check" style="font-size:20px; margin-bottom:6px;"></i><br>Anticipo (Ya pagado)
+        </label>
       </div>
 
       <div id="zona-cliente-fiado" style="display: none; background: #FFFBEB; padding: 18px; border-radius: 18px; border: 1px solid #FDE68A; margin-bottom: 24px;">
@@ -497,6 +500,18 @@
         </div>
         <p id="cliente-seleccionado-label" style="margin-top:10px; color:#2C2420; font-weight:600; font-size:15px;"></p>
         <input type="hidden" id="input-cliente-id">
+      </div>
+
+      <div id="zona-anticipo" style="display: none; background: #F0FDF4; padding: 18px; border-radius: 18px; border: 1px solid #BBF7D0; margin-bottom: 24px;">
+        <p style="font-size:14px; color:#16A34A; margin-bottom:12px; font-weight:600;">
+          <i class="fas fa-info-circle"></i> El dinero ya fue ingresado a caja. Solo se descontará el stock y se calculará la ganancia.
+        </p>
+        <div style="background: #FCFAF8; padding: 16px; border-radius: 16px; text-align:left; border: 1px solid #EBE6E0;">
+          <label style="font-weight:600; display:block; margin-bottom:6px; font-size:14px; color:#2C2420;">
+            Precio acordado por unidad (USD)
+          </label>
+          <input type="number" id="input-precio-anticipo" class="input-field" step="0.01" min="0.01" value="0">
+        </div>
       </div>
 
       <button class="btn" id="btn-confirmar-venta-final" style="background: #16A34A;"><i class="fas fa-check"></i> Registrar Venta</button>
@@ -728,7 +743,6 @@
     </div>
   </div>
 
-  <!-- NUEVO MODAL: INFORMACIÓN DE FINANZAS -->
   <div class="modal-overlay" id="modal-info-finanzas">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -774,7 +788,6 @@
   (function(){
     "use strict";
 
-    // --- NUEVO DICCIONARIO DE DEFINICIONES FINANCIERAS ---
     const INFO_FINANZAS = {
       'caja': {
         titulo: 'Caja (Efectivo / Banco)',
@@ -1080,7 +1093,6 @@
     let papeleraVentas = [], papeleraGastos = [];
     let clientesSeleccionadosFusion = [];
     
-    // 🔧 NUEVO: Variable para saber si estamos editando una receta existente
     let recetaEditandoId = null;
 
     const toastEl = document.getElementById('toast');
@@ -1305,7 +1317,7 @@
           const sel = document.getElementById('receta-select');
           if(sel) sel.value = recetaActual.id;
           actualizarVistaReceta();
-          actualizarEstadoBotonEditar(); // 🔧 NUEVO
+          actualizarEstadoBotonEditar();
         }
       }
     }
@@ -1377,9 +1389,10 @@
               ${tagFinanciero}
             </div>
             <div class="product-actions" style="display:flex; align-items:center; gap:6px;">
-              <button class="icon-btn" style="width:34px; height:34px; font-size:15px;" onclick="ajusteRapido('${prod.nombre}', -1)">–</button>
-              <button class="icon-btn" style="width:34px; height:34px; font-size:15px;" onclick="ajusteRapido('${prod.nombre}', 1)">+</button>
-              <button class="icon-btn" onclick="abrirModalIngreso('${prod.nombre}')"><i class="fas fa-sliders-h"></i></button>
+              <button class="icon-btn" style="width:34px; height:34px; font-size:15px;" onclick="ajusteRapido('${prod.nombre.replace(/'/g, "\\'")}', -1)">–</button>
+              <button class="icon-btn" style="width:34px; height:34px; font-size:15px;" onclick="ajusteRapido('${prod.nombre.replace(/'/g, "\\'")}', 1)">+</button>
+              <button class="icon-btn" onclick="abrirModalIngreso('${prod.nombre.replace(/'/g, "\\'")}')"><i class="fas fa-sliders-h"></i></button>
+              <button class="icon-btn danger" style="width:34px; height:34px; font-size:15px;" onclick="eliminarProducto('${prod.nombre.replace(/'/g, "\\'")}')" title="Eliminar producto"><i class="fas fa-trash"></i></button>
             </div>
           </li>`;
       }).join('');
@@ -1407,6 +1420,29 @@
       prod.cantidad = Math.max(0, prod.cantidad + incremento);
       guardarDatos();
       renderizarProductos(document.getElementById('buscar-producto').value);
+    };
+
+    window.eliminarProducto = function(nombre) {
+      const prod = productos.find(p => p.nombre === nombre);
+      if (!prod) {
+        mostrarToast('Producto no encontrado');
+        return;
+      }
+
+      let mensaje = `¿Estás seguro de eliminar "${prod.nombre}" del inventario?`;
+      if (prod.cantidad > 0) {
+        mensaje += `\n\n⚠️ ¡Atención! Tienes ${prod.cantidad} ${prod.unidad} en stock. Esto eliminará esa cantidad sin registro de venta ni ajuste.`;
+      } else {
+        mensaje += `\n\nEl stock actual es 0, se eliminará solo el producto de la lista.`;
+      }
+
+      if (!confirm(mensaje)) return;
+
+      productos = productos.filter(p => p.nombre !== prod.nombre);
+
+      guardarDatos();
+      renderizarProductos(document.getElementById('buscar-producto').value);
+      mostrarToast(`🗑️ "${prod.nombre}" eliminado correctamente`, 2000);
     };
 
     function actualizarSelectorBolsasReceta() {
@@ -1773,7 +1809,7 @@
 
     document.getElementById('btn-agregar-receta').addEventListener('click', () => {
       ingredientesTemporales = [];
-      recetaEditandoId = null; // Asegurar que no estamos en modo edición
+      recetaEditandoId = null;
       document.getElementById('receta-nombre').value = '';
       document.getElementById('receta-unidad').value = 'latas';
       document.getElementById('receta-unidades-por-lata').value = 40;
@@ -1785,7 +1821,6 @@
       document.getElementById('modal-receta').classList.add('active');
     });
 
-    // 🔧 NUEVO: Función para habilitar/deshabilitar el botón editar según el tipo de receta
     function actualizarEstadoBotonEditar() {
       const btnEdit = document.getElementById('btn-editar-receta');
       if (!btnEdit) return;
@@ -1800,7 +1835,6 @@
       }
     }
 
-    // 🔧 NUEVO: Listener para el botón Editar receta
     document.getElementById('btn-editar-receta').addEventListener('click', () => {
       if (!recetaActual) return;
       if (!recetaActual.id.startsWith('receta_')) {
@@ -1808,14 +1842,12 @@
         return;
       }
       
-      // Precargar los datos de la receta en el formulario
       document.getElementById('receta-nombre').value = recetaActual.nombre;
       document.getElementById('receta-unidad').value = recetaActual.unidadProduccion;
       document.getElementById('receta-unidades-por-lata').value = recetaActual.unidadesPorLata;
       document.getElementById('receta-latas-base').value = recetaActual.latasBase;
       actualizarTotalUnidadesBase();
       
-      // Empaque
       const pr = recetaActual.productoResultante;
       if (pr.tipo === 'compuesto') {
         document.getElementById('receta-unidades-paquete').value = pr.paquete.unidadesPorPaquete;
@@ -1825,11 +1857,10 @@
         document.getElementById('receta-bolsa').value = '';
       }
       
-      // Ingredientes temporales (copia profunda para no modificar el original accidentalmente)
       ingredientesTemporales = JSON.parse(JSON.stringify(recetaActual.ingredientes));
       renderizarIngredientesTemporales();
       
-      recetaEditandoId = recetaActual.id;  // Marcamos que estamos editando
+      recetaEditandoId = recetaActual.id;
       document.querySelector('#modal-receta .modal-title').textContent = '✏️ Editar receta';
       document.getElementById('modal-receta').classList.add('active');
     });
@@ -1880,7 +1911,6 @@
         if (!ing.nombre || isNaN(ing.cantidad) || ing.cantidad <= 0) { mostrarToast('Completa todos los ingredientes', 1500); return; }
       }
       
-      // 🔧 NUEVO: Si estamos editando, conservamos el ID original; si no, generamos uno nuevo
       const id = recetaEditandoId || ('receta_' + Date.now());
       const paqueteUnidades = document.getElementById('receta-unidades-paquete').value;
       const bolsaSeleccionada = document.getElementById('receta-bolsa').value;
@@ -1910,7 +1940,6 @@
         productoResultante
       };
       
-      // 🔧 NUEVO: Reemplazar o agregar según corresponda
       if (recetaEditandoId) {
         const idx = recetas.findIndex(r => r.id === recetaEditandoId);
         if (idx !== -1) {
@@ -1928,7 +1957,7 @@
       document.getElementById('receta-select').value = id;
       recetaActual = nuevaReceta;
       actualizarVistaReceta();
-      actualizarEstadoBotonEditar(); // 🔧 NUEVO
+      actualizarEstadoBotonEditar();
       renderizarProductos();
       document.getElementById('modal-receta').classList.remove('active');
       document.querySelector('#modal-receta .modal-title').textContent = '➕ Nueva receta';
@@ -1942,7 +1971,7 @@
       if (recetas.length) recetaActual = recetas[0]; else recetaActual = null;
       llenarSelectorRecetas();
       actualizarVistaReceta();
-      actualizarEstadoBotonEditar(); // 🔧 NUEVO
+      actualizarEstadoBotonEditar();
     });
 
     function llenarSelectorRecetas() {
@@ -1950,11 +1979,10 @@
       recetaSelect.innerHTML = recetas.map(r => `<option value="${r.id}">${r.nombre}</option>`).join('');
     }
 
-    // Modificar el listener del selector de recetas para que actualice el botón editar
     document.getElementById('receta-select').addEventListener('change', (e) => { 
       recetaActual = recetas.find(r => r.id === e.target.value); 
       actualizarVistaReceta();
-      actualizarEstadoBotonEditar(); // 🔧 NUEVO
+      actualizarEstadoBotonEditar();
     });
 
     // ---------- VENTAS PRINCIPALES ----------
@@ -1969,7 +1997,7 @@
         let icono = p.nombre.toLowerCase().includes('pan') ? 'fa-bread-slice' : 'fa-box-open';
         if(p.nombre.toLowerCase().includes('suelta')) icono = 'fa-cookie';
         return `
-          <div class="grid-card" onclick="seleccionarProductoVenta('${p.nombre}')">
+          <div class="grid-card" onclick="seleccionarProductoVenta('${p.nombre.replace(/'/g, "\\'")}')">
             <i class="fas ${icono}"></i>
             <div class="name">${p.nombre}</div>
             <div class="stock">${p.cantidad} disp.</div>
@@ -2007,6 +2035,7 @@
       document.getElementById('cliente-seleccionado-label').textContent = '';
       document.getElementById('input-cliente-id').value = '';
       document.getElementById('zona-cliente-fiado').style.display = 'none';
+      document.getElementById('zona-anticipo').style.display = 'none';
       document.querySelector('input[value="contado"]').checked = true;
       document.querySelectorAll('.radio-option').forEach(el => el.classList.remove('selected'));
       document.getElementById('opt-contado').classList.add('selected');
@@ -2018,27 +2047,7 @@
       const precioUnit = parseFloat(document.getElementById('input-precio-venta-modal').value) || 0;
       const nuevoTotal = cantidad * precioUnit;
       const lbl = document.getElementById('lbl-total-venta-modal');
-      const textoActual = lbl.textContent.replace(/[^0-9.-]+/g, '');
-      const totalActual = parseFloat(textoActual) || 0;
-      if (totalActual === nuevoTotal) {
-        lbl.textContent = formatearDinero(nuevoTotal);
-        return;
-      }
-      const duracion = 400;
-      const inicio = performance.now();
-      function animar(ahora) {
-        const transcurrido = ahora - inicio;
-        const progreso = Math.min(transcurrido / duracion, 1);
-        const eased = 1 - Math.pow(1 - progreso, 3);
-        const valorActual = totalActual + (nuevoTotal - totalActual) * eased;
-        lbl.textContent = formatearDinero(valorActual);
-        if (progreso < 1) {
-          requestAnimationFrame(animar);
-        } else {
-          lbl.textContent = formatearDinero(nuevoTotal);
-        }
-      }
-      requestAnimationFrame(animar);
+      lbl.textContent = formatearDinero(nuevoTotal);
     }
     window.actualizarTotalVentaModal = actualizarTotalVentaModal;
     
@@ -2051,8 +2060,16 @@
           radio.checked = true;
           if (radio.value === 'fiado') {
             document.getElementById('zona-cliente-fiado').style.display = 'block';
+            document.getElementById('zona-anticipo').style.display = 'none';
+          } else if (radio.value === 'anticipo') {
+            document.getElementById('zona-cliente-fiado').style.display = 'none';
+            document.getElementById('zona-anticipo').style.display = 'block';
+            if (productoVentaSeleccionado) {
+              document.getElementById('input-precio-anticipo').value = productoVentaSeleccionado.precio;
+            }
           } else {
             document.getElementById('zona-cliente-fiado').style.display = 'none';
+            document.getElementById('zona-anticipo').style.display = 'none';
           }
         }
       });
@@ -2124,34 +2141,52 @@
     document.getElementById('btn-confirmar-venta-final').addEventListener('click', () => {
       const cant = parseInt(document.getElementById('cantidad-venta').value);
       const tipo = document.querySelector('input[name="tipo-venta"]:checked')?.value;
-      const precioUnitario = parseFloat(document.getElementById('input-precio-venta-modal').value) || 0;
       if (!tipo) { mostrarToast('Selecciona un método de pago', 2000); return; }
-      if (precioUnitario <= 0) { mostrarToast('El precio debe ser mayor a 0', 2000); return; }
-      const precioTotalVenta = cant * precioUnitario;
+      if (productoVentaSeleccionado.cantidad < cant) { mostrarToast('Stock insuficiente', 2000); return; }
+
       const costoTotalVenta = cant * productoVentaSeleccionado.costo;
-      productoVentaSeleccionado.cantidad -= cant;
-      
-      if(tipo === 'contado') {
-         ventas.unshift({
-            id: Date.now(), fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
-            producto: productoVentaSeleccionado.nombre, cantidad: cant,
-            ingreso: precioTotalVenta, costo: costoTotalVenta, ganancia: precioTotalVenta - costoTotalVenta
-         });
+
+      if (tipo === 'contado') {
+        const precioUnitarioContado = parseFloat(document.getElementById('input-precio-venta-modal').value) || 0;
+        if (precioUnitarioContado <= 0) { mostrarToast('El precio debe ser mayor a 0', 2000); return; }
+        const precioTotalVenta = cant * precioUnitarioContado;
+        productoVentaSeleccionado.cantidad -= cant;
+        ventas.unshift({
+          id: Date.now(), fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
+          producto: productoVentaSeleccionado.nombre, cantidad: cant,
+          ingreso: precioTotalVenta, costo: costoTotalVenta, ganancia: precioTotalVenta - costoTotalVenta
+        });
       } else if (tipo === 'fiado') {
-         const clienteId = document.getElementById('input-cliente-id').value;
-         if (!clienteId) { mostrarToast('Selecciona un cliente de la lista'); return; }
-         let cli = clientes.find(c => c.id == clienteId);
-         if (!cli) { mostrarToast('Cliente no encontrado'); return; }
-         cli.deuda += precioTotalVenta;
-         
-         ventas.unshift({
-            id: Date.now(), fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
-            producto: productoVentaSeleccionado.nombre + ' (Fiado a ' + cli.nombre + ')',
-            cantidad: cant, ingreso: 0, costo: costoTotalVenta, ganancia: -costoTotalVenta,
-            deudaGenerada: precioTotalVenta
-         });
+        const clienteId = document.getElementById('input-cliente-id').value;
+        if (!clienteId) { mostrarToast('Selecciona un cliente de la lista'); return; }
+        let cli = clientes.find(c => c.id == clienteId);
+        if (!cli) { mostrarToast('Cliente no encontrado'); return; }
+        const precioUnitario = parseFloat(document.getElementById('input-precio-venta-modal').value) || 0;
+        if (precioUnitario <= 0) { mostrarToast('El precio debe ser mayor a 0', 2000); return; }
+        const precioTotalVenta = cant * precioUnitario;
+        productoVentaSeleccionado.cantidad -= cant;
+        cli.deuda += precioTotalVenta;
+        ventas.unshift({
+          id: Date.now(), fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
+          producto: productoVentaSeleccionado.nombre + ' (Fiado a ' + cli.nombre + ')',
+          cantidad: cant, ingreso: 0, costo: costoTotalVenta, ganancia: precioTotalVenta - costoTotalVenta,
+          deudaGenerada: precioTotalVenta
+        });
+      } else if (tipo === 'anticipo') {
+        const precioAcordado = parseFloat(document.getElementById('input-precio-anticipo').value) || 0;
+        if (precioAcordado <= 0) { mostrarToast('Ingresa el precio acordado para calcular la ganancia', 2000); return; }
+        const gananciaEstimada = (precioAcordado * cant) - costoTotalVenta;
+        productoVentaSeleccionado.cantidad -= cant;
+        ventas.unshift({
+          id: Date.now(), fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
+          producto: productoVentaSeleccionado.nombre + ' (Anticipo)',
+          cantidad: cant,
+          ingreso: 0,
+          costo: costoTotalVenta,
+          ganancia: gananciaEstimada
+        });
       }
-      
+
       guardarDatos(); renderizarProductos(); renderizarGridVentas(); renderizarClientes();
       document.getElementById('modal-tipo-venta').classList.remove('active');
       document.getElementById('cantidad-venta').value = 1;
@@ -2159,7 +2194,7 @@
       document.getElementById('grid-venta-directa').style.display = 'grid';
       document.getElementById('buscar-venta').style.display = 'block';
       productoVentaSeleccionado = null;
-      mostrarToast(tipo === 'contado' ? `✅ Venta al contado registrada` : `✅ Deuda asignada`, 3000);
+      mostrarToast(tipo === 'contado' ? `✅ Venta al contado registrada` : tipo === 'fiado' ? `✅ Deuda asignada` : `✅ Entrega registrada (anticipo)`, 3000);
     });
 
     document.getElementById('btn-nuevo-cliente-rapido').addEventListener('click', () => {
@@ -2224,7 +2259,6 @@
       }).join('');
     }
 
-    // Historial Mejorado con Botones Directos
     window.verHistorialCliente = (clienteId) => {
       const cli = clientes.find(c => c.id === clienteId);
       if (!cli) return;
@@ -2335,7 +2369,6 @@
       document.getElementById('modal-historial-cliente').classList.add('active');
     };
 
-    // Funciones del Nuevo Modal de Fiar Directo
     window.abrirModalFiarDirecto = (clienteId) => {
       clienteFiarActual = clientes.find(c => c.id === clienteId);
       if(!clienteFiarActual) return;
@@ -2343,13 +2376,12 @@
       document.getElementById('fiar-nombre-cliente').textContent = clienteFiarActual.nombre;
       renderizarGridFiarDirecto();
       
-      volverGridFiar(); // Asegura que siempre abre mostrando el grid
+      volverGridFiar();
       document.getElementById('modal-fiar-directo').classList.add('active');
     };
 
     function renderizarGridFiarDirecto(filtro = '') {
       const grid = document.getElementById('grid-fiar-directo');
-      // Filtro mágico: solo productos finales y que tengan stock >= 1
       let vendibles = productos.filter(p => esProductoFinal(p.nombre) && p.cantidad >= 1);
       
       if (filtro) {
@@ -2366,7 +2398,7 @@
         let icono = p.nombre.toLowerCase().includes('pan') ? 'fa-bread-slice' : 'fa-box-open';
         if(p.nombre.toLowerCase().includes('suelta')) icono = 'fa-cookie';
         return `
-          <div class="grid-card" onclick="seleccionarProductoFiar('${p.nombre}')">
+          <div class="grid-card" onclick="seleccionarProductoFiar('${p.nombre.replace(/'/g, "\\'")}')">
             <i class="fas ${icono}"></i>
             <div class="name">${p.nombre}</div>
             <div class="stock">${p.cantidad} disp.</div>
@@ -2407,17 +2439,13 @@
       const precioTotalVenta = cant * precioUnitario;
       const costoTotalVenta = cant * productoFiarSeleccionado.costo;
       
-      // Descontar stock
       productoFiarSeleccionado.cantidad -= cant;
-      
-      // Sumar deuda al cliente
       clienteFiarActual.deuda += precioTotalVenta;
       
-      // Registrar en ventas
       ventas.unshift({
         id: Date.now(), fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
         producto: productoFiarSeleccionado.nombre + ' (Fiado a ' + clienteFiarActual.nombre + ')',
-        cantidad: cant, ingreso: 0, costo: costoTotalVenta, ganancia: -costoTotalVenta,
+        cantidad: cant, ingreso: 0, costo: costoTotalVenta, ganancia: (cant * precioUnitario) - costoTotalVenta,
         deudaGenerada: precioTotalVenta
       });
       
@@ -2426,14 +2454,12 @@
       renderizarGridVentas(); 
       renderizarClientes();
       
-      // Actualizar vista del historial en tiempo real
       verHistorialCliente(clienteFiarActual.id);
       
       document.getElementById('modal-fiar-directo').classList.remove('active');
       mostrarToast(`✅ ${cant}x ${productoFiarSeleccionado.nombre} fiado a ${clienteFiarActual.nombre}`);
     });
 
-    // Modal de Abonos existente...
     window.abrirModalAbono = (clienteId) => {
       clienteAbonoActual = clientes.find(c => c.id === clienteId);
       document.getElementById('lbl-abono-cliente').textContent = clienteAbonoActual.nombre;
@@ -2469,7 +2495,7 @@
       ventas.unshift({
          id: Date.now(), fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
          producto: 'Abono de deuda - ' + clienteAbonoActual.nombre,
-         cantidad: 1, ingreso: montoDolares, costo: 0, ganancia: montoDolares
+         cantidad: 1, ingreso: montoDolares, costo: 0, ganancia: 0
       });
       guardarDatos(); renderizarClientes();
       if (document.getElementById('finanzas').classList.contains('active')) renderizarFinanzas();
@@ -2810,7 +2836,7 @@
     document.getElementById('receta-select').addEventListener('change', (e) => { 
       recetaActual = recetas.find(r => r.id === e.target.value); 
       actualizarVistaReceta();
-      actualizarEstadoBotonEditar(); // 🔧 NUEVO
+      actualizarEstadoBotonEditar();
     });
     document.getElementById('cantidad-produccion').addEventListener('input', actualizarVistaReceta);
 
@@ -3002,8 +3028,5 @@
 
   })();
 </script>
-
-  
 </body>
-
 </html>
