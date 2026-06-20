@@ -662,6 +662,7 @@
     </div>
   </div>
 
+    <!-- CARRITO MEJORA: Modal de fiar con carrito -->
   <div class="modal-overlay" id="modal-fiar-directo">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -669,11 +670,13 @@
         <button class="close-modal" onclick="document.getElementById('modal-fiar-directo').classList.remove('active')"><i class="fas fa-times"></i></button>
       </div>
       
+      <!-- Grid de productos -->
       <div id="contenedor-grid-fiar">
         <input type="text" id="buscar-venta-fiar" placeholder="🔍 Buscar producto en stock..." class="input-field" style="margin-bottom: 12px;">
         <div class="visual-grid" id="grid-fiar-directo"></div>
       </div>
 
+      <!-- Vista de agregar producto al carrito -->
       <div id="fiar-producto-seleccionado" style="display: none; text-align: center; margin-top: 16px;">
         <h4 id="lbl-fiar-producto" style="font-size: 18px; color: #4A3628; margin-bottom: 4px;">Producto</h4>
         <p id="lbl-fiar-stock" style="color: #8e8e93; font-size: 14px;">Stock: 0</p>
@@ -685,13 +688,33 @@
         
         <div class="flex-row" style="margin-top: 16px;">
           <input type="number" id="fiar-cantidad" class="input-field" value="1" min="1" step="1" style="flex:1;">
-          <button class="btn" id="btn-confirmar-fiar" style="background: #D97706; flex:2;"><i class="fas fa-plus-circle"></i> Añadir a la deuda</button>
+          <button class="btn" id="btn-agregar-carrito-fiar" style="background: #4A3628; flex:2;"><i class="fas fa-cart-plus"></i> Agregar al carrito</button>
         </div>
         
         <button class="btn btn-outline" style="margin-top:12px;" onclick="volverGridFiar()">← Volver a productos</button>
       </div>
+
+      <!-- Carrito de fiado -->
+      <div id="carrito-fiar-container" style="display: none; margin-top: 20px; border-top: 2px solid #EBE6E0; padding-top: 16px;">
+        <h4 style="font-size: 16px; color: #2C2420; margin-bottom: 12px; font-weight: 700;">
+          <i class="fas fa-shopping-basket" style="color: #D97706; margin-right: 6px;"></i> 
+          Carrito (<span id="carrito-fiar-count">0</span> items)
+        </h4>
+        <div id="lista-carrito-fiar" style="margin-bottom: 16px;"></div>
+        
+        <div style="background: #FFFBEB; padding: 16px; border-radius: 16px; border: 1px solid #FDE68A; margin-bottom: 16px; text-align: center;">
+          <span style="font-size: 13px; color: #8e8e93; font-weight: 600;">TOTAL A Fiar</span>
+          <div style="font-size: 28px; font-weight: 700; color: #D97706; margin-top: 4px;" id="carrito-fiar-total">$0.00</div>
+        </div>
+        
+        <button class="btn" id="btn-confirmar-fiar-final" style="background: #D97706; width: 100%;">
+          <i class="fas fa-check-circle"></i> Confirmar Fiado
+        </button>
+      </div>
     </div>
   </div>
+  <!-- FIN CARRITO MEJORA -->
+
   
   <div class="modal-overlay" id="modal-empleado">
     <div class="modal-sheet">
@@ -1085,7 +1108,10 @@
 
     let productos = [], recetas = [], ventas = [], clientes = [], gastos = [], compras = [], producciones = [], empleados = [], proveedores = [];
     let recetaActual = null, prodEditando = null, productoVentaSeleccionado = null, clienteAbonoActual = null, proveedorAbonoActual = null;
-    let clienteFiarActual = null, productoFiarSeleccionado = null; 
+
+        let clienteFiarActual = null, productoFiarSeleccionado = null; 
+    let carritoFiar = [];
+
     let ultimaActualizacionLocal = null;
     let ingredientesTemporales = [];
     let bcvRate = 0;
@@ -2370,9 +2396,14 @@
       document.getElementById('modal-historial-cliente').classList.add('active');
     };
 
+
+        // CARRITO MEJORA: Funciones de fiado con carrito
     window.abrirModalFiarDirecto = (clienteId) => {
       clienteFiarActual = clientes.find(c => c.id === clienteId);
       if(!clienteFiarActual) return;
+      
+      carritoFiar = [];
+      renderizarCarritoFiar();
       
       document.getElementById('fiar-nombre-cliente').textContent = clienteFiarActual.nombre;
       renderizarGridFiarDirecto();
@@ -2427,40 +2458,134 @@
       productoFiarSeleccionado = null;
     };
 
-    document.getElementById('btn-confirmar-fiar').addEventListener('click', () => {
+    function renderizarCarritoFiar() {
+      const container = document.getElementById('carrito-fiar-container');
+      const lista = document.getElementById('lista-carrito-fiar');
+      const countEl = document.getElementById('carrito-fiar-count');
+      const totalEl = document.getElementById('carrito-fiar-total');
+      
+      if (carritoFiar.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+      
+      container.style.display = 'block';
+      countEl.textContent = carritoFiar.length;
+      
+      let total = 0;
+      lista.innerHTML = carritoFiar.map((item, idx) => {
+        total += item.precioTotal;
+        return `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #F4EFEA;">
+            <div style="flex: 1;">
+              <div style="font-weight: 600; color: #2C2420; font-size: 15px;">${item.nombre}</div>
+              <div style="font-size: 13px; color: #8e8e93; margin-top: 2px;">
+                ${item.cantidad} x ${formatearDinero(item.precioUnitario)} = <strong style="color: #D97706;">${formatearDinero(item.precioTotal)}</strong>
+              </div>
+            </div>
+            <button class="icon-btn danger" onclick="eliminarDelCarritoFiar(${idx})" style="width: 32px; height: 32px; font-size: 13px;" title="Quitar del carrito">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        `;
+      }).join('');
+      
+      totalEl.textContent = formatearDinero(total);
+    }
+
+    window.eliminarDelCarritoFiar = (idx) => {
+      carritoFiar.splice(idx, 1);
+      renderizarCarritoFiar();
+    };
+
+    document.getElementById('btn-agregar-carrito-fiar').addEventListener('click', () => {
       if(!productoFiarSeleccionado || !clienteFiarActual) return;
       
       const cant = parseInt(document.getElementById('fiar-cantidad').value);
       const precioUnitario = parseFloat(document.getElementById('input-fiar-precio').value) || 0;
       
-      if(isNaN(cant) || cant <= 0) return;
+      if(isNaN(cant) || cant <= 0) { mostrarToast('Cantidad inválida', 2000); return; }
       if(productoFiarSeleccionado.cantidad < cant) { mostrarToast('Stock insuficiente', 2000); return; }
       if(precioUnitario <= 0) { mostrarToast('El precio debe ser mayor a 0', 2000); return; }
       
-      const precioTotalVenta = cant * precioUnitario;
-      const costoTotalVenta = cant * productoFiarSeleccionado.costo;
+      const existente = carritoFiar.find(item => item.nombre === productoFiarSeleccionado.nombre && item.precioUnitario === precioUnitario);
+      if (existente) {
+        if (productoFiarSeleccionado.cantidad < existente.cantidad + cant) {
+          mostrarToast('Stock insuficiente (ya tienes este producto en el carrito)', 2500);
+          return;
+        }
+        existente.cantidad += cant;
+        existente.precioTotal = existente.cantidad * existente.precioUnitario;
+      } else {
+        carritoFiar.push({
+          nombre: productoFiarSeleccionado.nombre,
+          cantidad: cant,
+          precioUnitario: precioUnitario,
+          precioTotal: cant * precioUnitario
+        });
+      }
       
-      productoFiarSeleccionado.cantidad -= cant;
-      clienteFiarActual.deuda += precioTotalVenta;
+      renderizarCarritoFiar();
+      volverGridFiar();
+      mostrarToast(`✅ ${cant}x ${productoFiarSeleccionado.nombre} agregado al carrito`);
+    });
+
+    document.getElementById('btn-confirmar-fiar-final').addEventListener('click', () => {
+      if (carritoFiar.length === 0) { mostrarToast('El carrito está vacío'); return; }
+      if (!clienteFiarActual) return;
       
-      ventas.unshift({
-        id: Date.now(), fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
-        producto: productoFiarSeleccionado.nombre + ' (Fiado a ' + clienteFiarActual.nombre + ')',
-        cantidad: cant, ingreso: 0, costo: costoTotalVenta, ganancia: (cant * precioUnitario) - costoTotalVenta,
-        deudaGenerada: precioTotalVenta
-      });
+      const cantidadItems = carritoFiar.length;
+      let totalDeuda = 0;
+      let errores = [];
+      
+      for (let item of carritoFiar) {
+        const prod = encontrarProducto(item.nombre);
+        if (!prod) { errores.push(`Producto "${item.nombre}" no existe`); continue; }
+        if (prod.cantidad < item.cantidad) { errores.push(`Stock insuficiente de ${item.nombre} (necesitas ${item.cantidad}, hay ${prod.cantidad.toFixed(0)})`); }
+      }
+      
+      if (errores.length > 0) {
+        mostrarToast(errores[0], 3000);
+        return;
+      }
+      
+      for (let item of carritoFiar) {
+        const prod = encontrarProducto(item.nombre);
+        const costoTotalVenta = item.cantidad * prod.costo;
+        const precioTotalVenta = item.cantidad * item.precioUnitario;
+        
+        prod.cantidad -= item.cantidad;
+        totalDeuda += precioTotalVenta;
+        
+        ventas.unshift({
+          id: Date.now() + Math.random(), 
+          fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
+          producto: prod.nombre + ' (Fiado a ' + clienteFiarActual.nombre + ')',
+          cantidad: item.cantidad, 
+          ingreso: 0, 
+          costo: costoTotalVenta, 
+          ganancia: precioTotalVenta - costoTotalVenta,
+          deudaGenerada: precioTotalVenta
+        });
+      }
+      
+      clienteFiarActual.deuda += totalDeuda;
       
       guardarDatos(); 
       renderizarProductos(); 
       renderizarGridVentas(); 
       renderizarClientes();
       
-      verHistorialCliente(clienteFiarActual.id);
-      
+      carritoFiar = [];
+      renderizarCarritoFiar();
       document.getElementById('modal-fiar-directo').classList.remove('active');
-      mostrarToast(`✅ ${cant}x ${productoFiarSeleccionado.nombre} fiado a ${clienteFiarActual.nombre}`);
+      mostrarToast(`✅ ${cantidadItems} producto(s) fiado(s) a ${clienteFiarActual.nombre}. Total: ${formatearDinero(totalDeuda)}`);
     });
+    // FIN CARRITO MEJORA
 
+
+
+    
     window.abrirModalAbono = (clienteId) => {
       clienteAbonoActual = clientes.find(c => c.id === clienteId);
       document.getElementById('lbl-abono-cliente').textContent = clienteAbonoActual.nombre;
