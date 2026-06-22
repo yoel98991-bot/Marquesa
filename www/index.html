@@ -236,7 +236,12 @@
     <div class="card">
       <div class="card-header">
         <h3>Inventario actual</h3>
-        <span class="badge" id="total-productos">0 prod.</span>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <span class="badge" id="total-productos">0 prod.</span>
+          <button class="icon-btn" id="btn-nuevo-producto" style="background: #4A3628; color: white; width: 40px; height: 40px;" title="Agregar nuevo producto">
+            <i class="fas fa-plus"></i>
+          </button>
+        </div>
       </div>
       <input type="text" id="buscar-producto" placeholder="🔍 Buscar producto o ingrediente..." class="input-field" style="margin-bottom: 16px;">
       <ul class="product-list" id="lista-productos"></ul>
@@ -785,7 +790,45 @@
     </div>
   </div>
 
-  <div id="toast" class="toast-message">Mensaje</div>
+  
+  <div class="modal-overlay" id="modal-nuevo-producto">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h2 class="modal-title">➕ Nuevo Producto / Ingrediente</h2>
+        <button class="close-modal" onclick="document.getElementById('modal-nuevo-producto').classList.remove('active')"><i class="fas fa-times"></i></button>
+      </div>
+
+      <label style="font-weight: 600; display:block; margin-bottom:8px; color:#2C2420;">Nombre del producto:</label>
+      <input type="text" id="nuevo-prod-nombre" placeholder="Ej: Manteca de cochino" class="input-field" style="margin-bottom: 16px;">
+
+      <label style="font-weight: 600; display:block; margin-bottom:8px; color:#2C2420;">Unidad de medida:</label>
+      <select id="nuevo-prod-unidad" class="select-unit" style="margin-bottom: 16px;">
+        <option value="sacos">Sacos</option>
+        <option value="kg">Kilos (kg)</option>
+        <option value="g">Gramos (g)</option>
+        <option value="L" selected>Litros (L)</option>
+        <option value="ml">Mililitros (ml)</option>
+        <option value="unidades">Unidades</option>
+      </select>
+
+      <label style="font-weight: 600; display:block; margin-bottom:8px; color:#2C2420;">Costo por unidad (USD):</label>
+      <input type="number" id="nuevo-prod-costo" placeholder="Ej: 3.50" class="input-field" step="0.01" min="0" style="margin-bottom: 16px;">
+
+      <label style="font-weight: 600; display:block; margin-bottom:8px; color:#2C2420;">Stock inicial:</label>
+      <input type="number" id="nuevo-prod-stock" placeholder="Ej: 0" class="input-field" step="any" min="0" value="0" style="margin-bottom: 24px;">
+
+      <div style="background: #FFFBEB; padding: 14px; border-radius: 14px; margin-bottom: 20px; border: 1px solid #FDE68A;">
+        <p style="font-size: 13px; color: #92400E; margin: 0;">
+          <i class="fas fa-lightbulb"></i> <strong>Tip:</strong> Si es un ingrediente para recetas, usa la misma unidad que aparece en la fórmula (L, kg, etc.).
+        </p>
+      </div>
+
+      <button class="btn" id="btn-guardar-nuevo-producto" style="background: #4A3628;">
+        <i class="fas fa-save"></i> Guardar Producto
+      </button>
+    </div>
+  </div>
+<div id="toast" class="toast-message">Mensaje</div>
 
   <nav class="bottom-nav">
     <button class="nav-item active" data-tab="inventario"><i class="fas fa-box"></i><span>Stock</span></button>
@@ -868,6 +911,10 @@
       { nombre: "Harina", cantidad: 0, unidad: "sacos", costo: 38.5, precio: 0, paqueteCantidad: 0 },
       { nombre: "Azúcar", cantidad: 0, unidad: "sacos", costo: 66.0, precio: 0, paqueteCantidad: 0 },
       { nombre: "Manteca", cantidad: 0, unidad: "kg", costo: 3.5, precio: 0, paqueteCantidad: 0 }, 
+
+      { nombre: "Manteca de cochino", cantidad: 0, unidad: "L", costo: 3.5, precio: 0, paqueteCantidad: 0 },
+
+      
       { nombre: "Micovan", cantidad: 0, unidad: "kg", costo: 7.0, precio: 0, paqueteCantidad: 0 },
       { nombre: "Bicarbonato", cantidad: 0, unidad: "kg", costo: 6.0, precio: 0, paqueteCantidad: 0 },
       { nombre: "Polvo de hornear", cantidad: 0, unidad: "kg", costo: 6.0, precio: 0, paqueteCantidad: 0 },
@@ -919,13 +966,15 @@
         id: 'catalinas', nombre: 'Catalinas', unidadProduccion: 'bandejas',
         unidadesPorLata: 24, latasBase: 1,
         ingredientes: [
-          { nombre: 'Harina', cantidad: 45 / 70, unidad: 'kg' },
-          { nombre: 'Azúcar', cantidad: 30 / 70, unidad: 'kg' },
-          { nombre: 'Bicarbonato', cantidad: 1 / 70, unidad: 'kg' },
-          { nombre: 'Manteca', cantidad: 1 / 70, unidad: 'kg' },
-          { nombre: 'Micovan', cantidad: 0.2 / 70, unidad: 'kg' },
-          { nombre: 'Esencias vainilla y anís', cantidad: 0.2 / 70, unidad: 'kg' }
-        ],
+  { nombre: 'Harina', cantidad: 45 / 70, unidad: 'kg' },
+  { nombre: 'Azúcar', cantidad: 30 / 70, unidad: 'kg' },
+  { nombre: 'Bicarbonato', cantidad: 1 / 70, unidad: 'kg' },
+  { nombre: 'Manteca', cantidad: 1 / 70, unidad: 'kg' },
+  { nombre: 'Manteca de cochino', cantidad: 2.5 / 70, unidad: 'L' },
+  { nombre: 'Micovan', cantidad: 0.2 / 70, unidad: 'kg' },
+  { nombre: 'Esencias vainilla y anís', cantidad: 0.2 / 70, unidad: 'kg' }
+],
+
         productoResultante: { 
           tipo: 'compuesto', paquete: { nombre: 'Paquete Catalinas 1kg', unidadesPorPaquete: 10 }, 
           suelto: { nombre: 'Catalinas sueltas (unidad)' }, insumoEmpaque: { nombre: 'Bolsas 1k', cantidadPorPaquete: 1 } 
@@ -950,13 +999,15 @@
         id: 'cortaos', nombre: 'Cortaos', unidadProduccion: 'bandejas',
         unidadesPorLata: 84, latasBase: 1,
         ingredientes: [
-          { nombre: 'Harina', cantidad: 45 / 20, unidad: 'kg' },
-          { nombre: 'Azúcar', cantidad: 30 / 20, unidad: 'kg' },
-          { nombre: 'Bicarbonato', cantidad: 1 / 20, unidad: 'kg' },
-          { nombre: 'Manteca', cantidad: 1 / 20, unidad: 'kg' },
-          { nombre: 'Micovan', cantidad: 0.2 / 20, unidad: 'kg' },
-          { nombre: 'Esencias vainilla y anís', cantidad: 0.2 / 20, unidad: 'kg' }
-        ],
+  { nombre: 'Harina', cantidad: 45 / 20, unidad: 'kg' },
+  { nombre: 'Azúcar', cantidad: 30 / 20, unidad: 'kg' },
+  { nombre: 'Bicarbonato', cantidad: 1 / 20, unidad: 'kg' },
+  { nombre: 'Manteca', cantidad: 1 / 20, unidad: 'kg' },
+  { nombre: 'Manteca de cochino', cantidad: 2.5 / 20, unidad: 'L' },
+  { nombre: 'Micovan', cantidad: 0.2 / 20, unidad: 'kg' },
+  { nombre: 'Esencias vainilla y anís', cantidad: 0.2 / 20, unidad: 'kg' }
+],
+
         productoResultante: {
           tipo: 'compuesto', paquete: { nombre: 'Paquete Cortaos 1kg', unidadesPorPaquete: 10 },
           suelto: { nombre: 'Cortaos sueltas (unidad)' }, insumoEmpaque: { nombre: 'Bolsas 1k', cantidadPorPaquete: 1 }
@@ -966,13 +1017,15 @@
         id: 'catalinas_pequenas', nombre: 'Catalinas pequeñas', unidadProduccion: 'bandejas',
         unidadesPorLata: 48, latasBase: 1,
         ingredientes: [
-          { nombre: 'Harina', cantidad: 45 / 90, unidad: 'kg' },
-          { nombre: 'Azúcar', cantidad: 30 / 90, unidad: 'kg' },
-          { nombre: 'Bicarbonato', cantidad: 1 / 90, unidad: 'kg' },
-          { nombre: 'Manteca', cantidad: 1 / 90, unidad: 'kg' },
-          { nombre: 'Micovan', cantidad: 0.2 / 90, unidad: 'kg' },
-          { nombre: 'Esencias vainilla y anís', cantidad: 0.2 / 90, unidad: 'kg' }
-        ],
+  { nombre: 'Harina', cantidad: 45 / 90, unidad: 'kg' },
+  { nombre: 'Azúcar', cantidad: 30 / 90, unidad: 'kg' },
+  { nombre: 'Bicarbonato', cantidad: 1 / 90, unidad: 'kg' },
+  { nombre: 'Manteca', cantidad: 1 / 90, unidad: 'kg' },
+  { nombre: 'Manteca de cochino', cantidad: 2.5 / 90, unidad: 'L' },
+  { nombre: 'Micovan', cantidad: 0.2 / 90, unidad: 'kg' },
+  { nombre: 'Esencias vainilla y anís', cantidad: 0.2 / 90, unidad: 'kg' }
+],
+
         productoResultante: {
           tipo: 'compuesto', paquete: { nombre: 'Paquete Catalinas pequeñas 1kg', unidadesPorPaquete: 24 },
           suelto: { nombre: 'Catalinas pequeñas sueltas' }, insumoEmpaque: { nombre: 'Bolsas 1k', cantidadPorPaquete: 1 }
@@ -1117,7 +1170,10 @@
     let bcvRate = 0;
     let syncStatus = 'offline';
     let sincronizando = false;
-    let papeleraVentas = [], papeleraGastos = [];
+    let papeleraVentas = [], papeleraGastos = [], papeleraCompras = [], papeleraProducciones = [];
+
+    let historialClientes = [];
+
     let clientesSeleccionadosFusion = [];
     
     let recetaEditandoId = null;
@@ -1198,6 +1254,11 @@
       if (emp) empleados = JSON.parse(emp); else empleados = [];
       const prov = localStorage.getItem('almacen_fusion_proveedores_v7');
       if (prov) proveedores = JSON.parse(prov); else proveedores = [];
+
+const h = localStorage.getItem('almacen_fusion_historial_clientes_v7');
+if (h) historialClientes = JSON.parse(h); else historialClientes = [];
+
+      
       
       ultimaActualizacionLocal = localStorage.getItem('almacen_ultima_actualizacion') || null;
     }
@@ -1212,6 +1273,8 @@
       localStorage.setItem('almacen_fusion_producciones_v7_esencias', JSON.stringify(producciones));
       localStorage.setItem('almacen_fusion_empleados_v7', JSON.stringify(empleados));
       localStorage.setItem('almacen_fusion_proveedores_v7', JSON.stringify(proveedores));
+      localStorage.setItem('almacen_fusion_historial_clientes_v7', JSON.stringify(historialClientes));
+
       const ahora = new Date().toISOString();
       localStorage.setItem('almacen_ultima_actualizacion', ahora);
       ultimaActualizacionLocal = ahora;
@@ -1225,10 +1288,13 @@
         sincronizando = true;
         actualizarIndicadorSync('syncing');
         try {
-          const estadoCompleto = {
-            productos, recetas, ventas, clientes, gastos, compras, producciones, empleados, proveedores,
-            ultima_actualizacion: ultimaActualizacionLocal
-          };
+
+const estadoCompleto = {
+  productos, recetas, ventas, clientes, gastos, compras, producciones, empleados, proveedores, historialClientes,
+  ultima_actualizacion: ultimaActualizacionLocal
+};
+
+          
           const { error } = await supabaseClient.from('estado_almacen').upsert({ id: 1, datos: estadoCompleto });
           if (error) throw error;
           actualizarIndicadorSync('synced');
@@ -1236,8 +1302,49 @@
           console.error("⚠️ Falló la sincronización.", e);
           actualizarIndicadorSync('error');
         } finally {
-          sincronizando = false;
+        setTimeout(() => { if(pantallaCarga) pantallaCarga.style.display = 'none'; }, 1000);
+
+        // --- INICIO DE LA CORRECCIÓN ---
+        // 1. Forzar la actualización de las recetas predefinidas del código
+        const recetasUsuario = recetas.filter(receta => receta.id.startsWith('receta_'));
+        recetas = [...RECETAS_PREDEF, ...recetasUsuario];
+
+        // 2. Asegurar que los nuevos ingredientes se agreguen al inventario automáticamente
+        PRODUCTOS_INICIALES.forEach(prodInicial => {
+          if (!productos.some(p => p.nombre === prodInicial.nombre)) {
+            productos.push({ ...prodInicial });
+          }
+        });
+        // --- FIN DE LA CORRECCIÓN ---
+
+        productos.forEach(prod => { if (prod.paqueteCantidad === undefined) prod.paqueteCantidad = 0; });
+        recetas.forEach(receta => {
+          if (receta.unidadesPorLata === undefined) {
+            receta.unidadesPorLata = receta.unidadesPorProduccion || 1;
+            receta.latasBase = 1;
+          }
+        });
+        
+        renderizarProductos();
+        renderizarGridVentas();
+        renderizarClientes();
+        renderizarEmpleados();
+        renderizarProveedores();
+        llenarSelectorRecetas();
+        renderizarGastos();
+        renderizarFinanzas();
+        
+        if(recetas.length) { 
+          recetaActual = recetas[0]; 
+          const sel = document.getElementById('receta-select');
+          if(sel) sel.value = recetaActual.id;
+          actualizarVistaReceta();
+          actualizarEstadoBotonEditar();
         }
+
+        // 3. Forzamos un guardado para que la nube y el historial asimilen los nuevos cambios
+        guardarDatos();
+      }
       }
     }
 
@@ -1281,6 +1388,9 @@
               producciones = remoto.producciones || producciones;
               empleados = remoto.empleados || empleados;
               proveedores = remoto.proveedores || proveedores;
+
+             historialClientes = remoto.historialClientes || historialClientes;
+
               ultimaActualizacionLocal = fechaRemota;
               guardarLocal();
               if(lblCarga) lblCarga.textContent = "✅ Datos de la nube aplicados";
@@ -1298,6 +1408,9 @@
             producciones = remoto.producciones || producciones;
             empleados = remoto.empleados || empleados;
             proveedores = remoto.proveedores || proveedores;
+
+            historialClientes = remoto.historialClientes || historialClientes;
+
             ultimaActualizacionLocal = fechaRemota;
             guardarLocal();
             if(lblCarga) lblCarga.textContent = "✅ Datos de la nube aplicados";
@@ -1448,6 +1561,48 @@
       guardarDatos();
       renderizarProductos(document.getElementById('buscar-producto').value);
     };
+
+    // ---------- NUEVO PRODUCTO ----------
+    document.getElementById('btn-nuevo-producto').addEventListener('click', () => {
+      document.getElementById('nuevo-prod-nombre').value = '';
+      document.getElementById('nuevo-prod-unidad').value = 'L';
+      document.getElementById('nuevo-prod-costo').value = '';
+      document.getElementById('nuevo-prod-stock').value = '0';
+      document.getElementById('modal-nuevo-producto').classList.add('active');
+    });
+
+    document.getElementById('btn-guardar-nuevo-producto').addEventListener('click', () => {
+      const nombre = document.getElementById('nuevo-prod-nombre').value.trim();
+      const unidad = document.getElementById('nuevo-prod-unidad').value;
+      const costo = parseFloat(document.getElementById('nuevo-prod-costo').value) || 0;
+      const stock = parseFloat(document.getElementById('nuevo-prod-stock').value) || 0;
+
+      if (!nombre) {
+        mostrarToast('El nombre del producto es obligatorio', 2000);
+        return;
+      }
+
+      if (productos.some(p => p.nombre.toLowerCase() === nombre.toLowerCase())) {
+        mostrarToast('Ya existe un producto con ese nombre', 2000);
+        return;
+      }
+
+      const nuevoProducto = {
+        nombre: nombre,
+        cantidad: stock,
+        unidad: unidad,
+        costo: costo,
+        precio: 0,
+        paqueteCantidad: 0
+      };
+
+      productos.push(nuevoProducto);
+      guardarDatos();
+      renderizarProductos(document.getElementById('buscar-producto').value);
+
+      document.getElementById('modal-nuevo-producto').classList.remove('active');
+      mostrarToast(`✅ "${nombre}" agregado al inventario`, 2500);
+    });
 
     window.eliminarProducto = function(nombre) {
       const prod = productos.find(p => p.nombre === nombre);
@@ -2290,10 +2445,17 @@
       const cli = clientes.find(c => c.id === clienteId);
       if (!cli) return;
       
-      const movimientos = ventas.filter(v => 
-        v.producto.includes('(Fiado a ' + cli.nombre + ')') || 
-        v.producto.startsWith('Abono de deuda - ' + cli.nombre)
-      );
+      const movimientos = [
+  ...ventas.filter(v => 
+    v.producto.includes('(Fiado a ' + cli.nombre + ')') || 
+    v.producto.startsWith('Abono de deuda - ' + cli.nombre)
+  ),
+  ...historialClientes.filter(v => 
+    v.producto.includes('(Fiado a ' + cli.nombre + ')') || 
+    v.producto.startsWith('Abono de deuda - ' + cli.nombre)
+  )
+];
+
       
       let totalConsumido = 0;
       let totalPagado = 0;
@@ -2785,62 +2947,72 @@
 
     // ---------- FINANZAS ----------
     function renderizarFinanzas() {
-      let totalIngresosVentas = 0, totalCostos = 0, totalGanancia = 0;
-      const listaVentas = document.getElementById('lista-ventas');
-      
-      if (ventas.length === 0) listaVentas.innerHTML = '<div style="text-align:center; padding:20px; color:#8e8e93;">No hay ventas registradas</div>';
-      else listaVentas.innerHTML = '';
-      
-      ventas.forEach(v => {
-        totalIngresosVentas += v.ingreso || 0;
-        totalCostos += v.costo || 0;
-        totalGanancia += v.ganancia || 0;
-        
-        const colorMonto = v.ingreso > 0 ? '#16A34A' : '#8e8e93';
-        listaVentas.innerHTML += `
-          <div class="venta-item">
-            <div class="venta-info">
-              <h4 style="color:#2C2420;">${v.cantidad}x ${v.producto}</h4>
-              <p>${v.fecha}</p>
-            </div>
-            <div class="venta-monto" style="color: ${colorMonto}">${v.ingreso > 0 ? '+'+formatearDinero(v.ingreso) : 'Fiado'}</div>
-          </div>`;
-      });
-      
-      const totalGastosEfectivo = gastos.reduce((acc, g) => acc + (g.monto || 0), 0);
-      const totalGastosOperativos = gastos.filter(g => !g.esPagoDeuda).reduce((acc, g) => acc + (g.monto || 0), 0);
+  // SOLO ventas operativas (excluir fiados y abonos del dashboard)
+  const ventasOperativas = ventas.filter(v => 
+    !v.producto.includes('(Fiado a') && 
+    !v.producto.startsWith('Abono de deuda')
+  );
+  
+  let totalIngresosVentas = 0, totalCostos = 0, totalGanancia = 0;
+  const listaVentas = document.getElementById('lista-ventas');
+  
+  if (ventasOperativas.length === 0) {
+    listaVentas.innerHTML = '<div style="text-align:center; padding:20px; color:#8e8e93;">No hay ventas registradas</div>';
+  } else {
+    listaVentas.innerHTML = '';
+  }
+  
+  ventasOperativas.forEach(v => {
+    totalIngresosVentas += v.ingreso || 0;
+    totalCostos += v.costo || 0;
+    totalGanancia += v.ganancia || 0;
+    
+    const colorMonto = v.ingreso > 0 ? '#16A34A' : '#8e8e93';
+    listaVentas.innerHTML += `
+      <div class="venta-item">
+        <div class="venta-info">
+          <h4 style="color:#2C2420;">${v.cantidad}x ${v.producto}</h4>
+          <p>${v.fecha}</p>
+        </div>
+        <div class="venta-monto" style="color: ${colorMonto}">${v.ingreso > 0 ? '+'+formatearDinero(v.ingreso) : 'Fiado'}</div>
+      </div>`;
+  });
+  
+  const totalGastosEfectivo = gastos.reduce((acc, g) => acc + (g.monto || 0), 0);
+  const totalGastosOperativos = gastos.filter(g => !g.esPagoDeuda).reduce((acc, g) => acc + (g.monto || 0), 0);
 
-      const totalComprasContado = compras.filter(c => c.metodo === 'contado').reduce((acc, c) => acc + (c.total || 0), 0);
+  const totalComprasContado = compras.filter(c => c.metodo === 'contado').reduce((acc, c) => acc + (c.total || 0), 0);
 
-      const cajaReal = totalIngresosVentas - totalGastosEfectivo - totalComprasContado;
-      const gananciaNeta = totalGanancia - totalGastosOperativos; 
-      
-      let capitalNeto = 0;
-      productos.forEach(p => {
-        if (!esProductoFinal(p.nombre) && p.cantidad > 0) capitalNeto += p.cantidad * p.costo;
-      });
+  const cajaReal = totalIngresosVentas - totalGastosEfectivo - totalComprasContado;
+  const gananciaNeta = totalGanancia - totalGastosOperativos; 
+  
+  let capitalNeto = 0;
+  productos.forEach(p => {
+    if (!esProductoFinal(p.nombre) && p.cantidad > 0) capitalNeto += p.cantidad * p.costo;
+  });
 
-      const totalPorCobrar = clientes.reduce((acc, cli) => acc + (cli.deuda || 0), 0);
-      const totalDeudaProv = proveedores.reduce((acc, p) => acc + (p.deuda || 0), 0);
+  const totalPorCobrar = clientes.reduce((acc, cli) => acc + (cli.deuda || 0), 0);
+  const totalDeudaProv = proveedores.reduce((acc, p) => acc + (p.deuda || 0), 0);
 
-      function setTextSafe(id, value) {
-        const el = document.getElementById(id);
-        if (el) el.textContent = formatearDinero(value);
-      }
-      setTextSafe('fin-caja', cajaReal);
-      setTextSafe('fin-por-pagar', totalDeudaProv);
-      setTextSafe('fin-ganancia', gananciaNeta);
-      setTextSafe('fin-gastos', totalGastosOperativos);
-      setTextSafe('fin-compras', capitalNeto);
-      setTextSafe('fin-por-cobrar', totalPorCobrar);
-      setTextSafe('fin-ingresos', totalIngresosVentas);
-      setTextSafe('fin-costos', totalCostos);
-      
-      const finCajaEl = document.getElementById('fin-caja');
-      if(finCajaEl) finCajaEl.style.color = cajaReal >= 0 ? '#16A34A' : '#DC2626';
-      const finGananciaEl = document.getElementById('fin-ganancia');
-      if(finGananciaEl) finGananciaEl.style.color = gananciaNeta >= 0 ? '#16A34A' : '#DC2626';
-    }
+  function setTextSafe(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = formatearDinero(value);
+  }
+  setTextSafe('fin-caja', cajaReal);
+  setTextSafe('fin-por-pagar', totalDeudaProv);
+  setTextSafe('fin-ganancia', gananciaNeta);
+  setTextSafe('fin-gastos', totalGastosOperativos);
+  setTextSafe('fin-compras', capitalNeto);
+  setTextSafe('fin-por-cobrar', totalPorCobrar);
+  setTextSafe('fin-ingresos', totalIngresosVentas);
+  setTextSafe('fin-costos', totalCostos);
+  
+  const finCajaEl = document.getElementById('fin-caja');
+  if(finCajaEl) finCajaEl.style.color = cajaReal >= 0 ? '#16A34A' : '#DC2626';
+  const finGananciaEl = document.getElementById('fin-ganancia');
+  if(finGananciaEl) finGananciaEl.style.color = gananciaNeta >= 0 ? '#16A34A' : '#DC2626';
+}
+
 
     function renderizarGastos() {
       const lista = document.getElementById('lista-gastos');
@@ -2876,34 +3048,76 @@
       mostrarToast('✅ Gasto registrado y descontado', 2500);
     });
 
-    document.getElementById('btn-limpiar-finanzas').addEventListener('click', () => {
-      if (ventas.length === 0 && gastos.length === 0 && compras.length === 0 && producciones.length === 0) {
-        mostrarToast('No hay nada que limpiar'); return;
-      }
-      papeleraVentas = ventas;
-      papeleraGastos = gastos;
-      ventas = [];
-      gastos = [];
-      compras = [];
-      producciones = [];
-      guardarDatos();
-      mostrarToast('Historial limpiado. Toca este aviso para deshacer (30s)', 30000);
-      let timeout = setTimeout(() => {
-        papeleraVentas = []; papeleraGastos = [];
-        toastEl.onclick = null;
-      }, 30000);
-      toastEl.onclick = () => {
-        clearTimeout(timeout);
-        ventas = papeleraVentas;
-        gastos = papeleraGastos;
-        papeleraVentas = []; papeleraGastos = [];
-        guardarDatos();
-        toastEl.classList.remove('show');
-        mostrarToast('✅ Restaurado');
-        toastEl.onclick = null;
-      };
-    });
+  document.getElementById('btn-limpiar-finanzas').addEventListener('click', () => {
+  // Separar: fiados/abonos (historial de clientes) vs operativos (caja del período)
+  const ventasProtegidas = ventas.filter(v => 
+    v.producto.includes('(Fiado a') || 
+    v.producto.startsWith('Abono de deuda')
+  );
+  
+  const ventasOperativas = ventas.filter(v => 
+    !v.producto.includes('(Fiado a') && 
+    !v.producto.startsWith('Abono de deuda')
+  );
+  
+  if (ventasOperativas.length === 0 && gastos.length === 0 && compras.length === 0 && producciones.length === 0) {
+    mostrarToast('No hay movimientos operativos que limpiar'); 
+    return;
+  }
+  
+  // Archivar fiados/abonos en historial permanente de clientes
+  historialClientes = historialClientes.concat(ventasProtegidas);
+  
+  // Guardar en papelera solo lo operativo (para el "deshacer")
+  papeleraVentas = ventasOperativas;
+  papeleraGastos = gastos;
+  papeleraCompras = compras;
+  papeleraProducciones = producciones;
+  
+  // Reset: ventas queda limpio (sin fiados ni abonos)
+  ventas = [];
+  gastos = [];
+  compras = [];
+  producciones = [];
+  
+  guardarDatos();
+  renderizarFinanzas();
+  renderizarGastos();
+  renderizarClientes();
+  renderizarProveedores();
+  
+  mostrarToast('✅ Cierre completado. Clientes, proveedores e inventario intactos. Toca para deshacer (30s)', 30000);
+  
+  let timeout = setTimeout(() => {
+    papeleraVentas = []; 
+    papeleraGastos = [];
+    papeleraCompras = [];
+    papeleraProducciones = [];
+    toastEl.onclick = null;
+  }, 30000);
+  
+  toastEl.onclick = () => {
+    clearTimeout(timeout);
+    ventas = papeleraVentas;
+    gastos = papeleraGastos;
+    compras = papeleraCompras;
+    producciones = papeleraProducciones;
+    papeleraVentas = []; 
+    papeleraGastos = [];
+    papeleraCompras = [];
+    papeleraProducciones = [];
+    guardarDatos();
+    renderizarFinanzas();
+    renderizarGastos();
+    toastEl.classList.remove('show');
+    mostrarToast('✅ Restaurado');
+    toastEl.onclick = null;
+  };
+});
 
+
+
+    
     function exportarDatos() {
       const datos = { productos, recetas, ventas, clientes, gastos, compras, producciones, empleados, proveedores };
       const blob = new Blob([JSON.stringify(datos, null, 2)], {type: 'application/json'});
