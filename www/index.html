@@ -1280,7 +1280,7 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
       ultimaActualizacionLocal = ahora;
     }
 
-    async function guardarDatos() {
+        async function guardarDatos() {
       guardarLocal();
       renderizarFinanzas();
       renderizarGastos();
@@ -1288,12 +1288,10 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
         sincronizando = true;
         actualizarIndicadorSync('syncing');
         try {
-
-const estadoCompleto = {
-  productos, recetas, ventas, clientes, gastos, compras, producciones, empleados, proveedores, historialClientes,
-  ultima_actualizacion: ultimaActualizacionLocal
-};
-
+          const estadoCompleto = {
+            productos, recetas, ventas, clientes, gastos, compras, producciones, empleados, proveedores, historialClientes,
+            ultima_actualizacion: ultimaActualizacionLocal
+          };
           
           const { error } = await supabaseClient.from('estado_almacen').upsert({ id: 1, datos: estadoCompleto });
           if (error) throw error;
@@ -1302,51 +1300,46 @@ const estadoCompleto = {
           console.error("⚠️ Falló la sincronización.", e);
           actualizarIndicadorSync('error');
         } finally {
-        setTimeout(() => { if(pantallaCarga) pantallaCarga.style.display = 'none'; }, 1000);
+          const pantallaCarga = document.getElementById('pantalla-carga');
+          setTimeout(() => { if(pantallaCarga) pantallaCarga.style.display = 'none'; }, 1000);
 
-        // --- INICIO DE LA CORRECCIÓN ---
-        // 1. Forzar la actualización de las recetas predefinidas del código
-        const recetasUsuario = recetas.filter(receta => receta.id.startsWith('receta_'));
-        recetas = [...RECETAS_PREDEF, ...recetasUsuario];
+          // Asegurar que los nuevos ingredientes se agreguen al inventario automáticamente
+          PRODUCTOS_INICIALES.forEach(prodInicial => {
+            if (!productos.some(p => p.nombre === prodInicial.nombre)) {
+              productos.push({ ...prodInicial });
+            }
+          });
 
-        // 2. Asegurar que los nuevos ingredientes se agreguen al inventario automáticamente
-        PRODUCTOS_INICIALES.forEach(prodInicial => {
-          if (!productos.some(p => p.nombre === prodInicial.nombre)) {
-            productos.push({ ...prodInicial });
+          productos.forEach(prod => { if (prod.paqueteCantidad === undefined) prod.paqueteCantidad = 0; });
+          recetas.forEach(receta => {
+            if (receta.unidadesPorLata === undefined) {
+              receta.unidadesPorLata = receta.unidadesPorProduccion || 1;
+              receta.latasBase = 1;
+            }
+          });
+          
+          renderizarProductos();
+          renderizarGridVentas();
+          renderizarClientes();
+          renderizarEmpleados();
+          renderizarProveedores();
+          llenarSelectorRecetas();
+          renderizarGastos();
+          renderizarFinanzas();
+          
+          if(recetas.length) { 
+            recetaActual = recetas[0]; 
+            const sel = document.getElementById('receta-select');
+            if(sel) sel.value = recetaActual.id;
+            actualizarVistaReceta();
+            actualizarEstadoBotonEditar();
           }
-        });
-        // --- FIN DE LA CORRECCIÓN ---
-
-        productos.forEach(prod => { if (prod.paqueteCantidad === undefined) prod.paqueteCantidad = 0; });
-        recetas.forEach(receta => {
-          if (receta.unidadesPorLata === undefined) {
-            receta.unidadesPorLata = receta.unidadesPorProduccion || 1;
-            receta.latasBase = 1;
-          }
-        });
-        
-        renderizarProductos();
-        renderizarGridVentas();
-        renderizarClientes();
-        renderizarEmpleados();
-        renderizarProveedores();
-        llenarSelectorRecetas();
-        renderizarGastos();
-        renderizarFinanzas();
-        
-        if(recetas.length) { 
-          recetaActual = recetas[0]; 
-          const sel = document.getElementById('receta-select');
-          if(sel) sel.value = recetaActual.id;
-          actualizarVistaReceta();
-          actualizarEstadoBotonEditar();
+          
+          sincronizando = false;
         }
-
-        // 3. Forzamos un guardado para que la nube y el historial asimilen los nuevos cambios
-        guardarDatos();
-      }
       }
     }
+
 
     async function cargarDatos() {
       const lblCarga = document.getElementById('lbl-carga'); 
@@ -2003,26 +1996,24 @@ const estadoCompleto = {
       document.getElementById('modal-receta').classList.add('active');
     });
 
-    function actualizarEstadoBotonEditar() {
+    
+        function actualizarEstadoBotonEditar() {
       const btnEdit = document.getElementById('btn-editar-receta');
       if (!btnEdit) return;
-      if (recetaActual && recetaActual.id.startsWith('receta_')) {
+      if (recetaActual) {
         btnEdit.disabled = false;
         btnEdit.style.opacity = '1';
         btnEdit.title = 'Editar receta';
       } else {
         btnEdit.disabled = true;
         btnEdit.style.opacity = '0.5';
-        btnEdit.title = 'No se pueden editar recetas predefinidas';
+        btnEdit.title = 'Selecciona una receta para editar';
       }
     }
 
-    document.getElementById('btn-editar-receta').addEventListener('click', () => {
+
+         document.getElementById('btn-editar-receta').addEventListener('click', () => {
       if (!recetaActual) return;
-      if (!recetaActual.id.startsWith('receta_')) {
-        mostrarToast('Las recetas predefinidas no se pueden editar', 2000);
-        return;
-      }
       
       document.getElementById('receta-nombre').value = recetaActual.nombre;
       document.getElementById('receta-unidad').value = recetaActual.unidadProduccion;
@@ -2047,6 +2038,7 @@ const estadoCompleto = {
       document.getElementById('modal-receta').classList.add('active');
     });
 
+    
     document.getElementById('cerrar-modal-receta').addEventListener('click', () => {
       document.getElementById('modal-receta').classList.remove('active');
       recetaEditandoId = null;
