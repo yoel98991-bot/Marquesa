@@ -2937,72 +2937,213 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
     };
 
     // ---------- FINANZAS ----------
+        // ---------- FINANZAS ----------
     function renderizarFinanzas() {
-  // SOLO ventas operativas (excluir fiados y abonos del dashboard)
-  const ventasOperativas = ventas.filter(v => 
-    !v.producto.includes('(Fiado a') && 
-    !v.producto.startsWith('Abono de deuda')
-  );
-  
-  let totalIngresosVentas = 0, totalCostos = 0, totalGanancia = 0;
-  const listaVentas = document.getElementById('lista-ventas');
-  
-  if (ventasOperativas.length === 0) {
-    listaVentas.innerHTML = '<div style="text-align:center; padding:20px; color:#8e8e93;">No hay ventas registradas</div>';
-  } else {
-    listaVentas.innerHTML = '';
-  }
-  
-  ventasOperativas.forEach(v => {
-    totalIngresosVentas += v.ingreso || 0;
-    totalCostos += v.costo || 0;
-    totalGanancia += v.ganancia || 0;
-    
-    const colorMonto = v.ingreso > 0 ? '#16A34A' : '#8e8e93';
-    listaVentas.innerHTML += `
-      <div class="venta-item">
-        <div class="venta-info">
-          <h4 style="color:#2C2420;">${v.cantidad}x ${v.producto}</h4>
-          <p>${v.fecha}</p>
-        </div>
-        <div class="venta-monto" style="color: ${colorMonto}">${v.ingreso > 0 ? '+'+formatearDinero(v.ingreso) : 'Fiado'}</div>
-      </div>`;
-  });
-  
-  const totalGastosEfectivo = gastos.reduce((acc, g) => acc + (g.monto || 0), 0);
-  const totalGastosOperativos = gastos.filter(g => !g.esPagoDeuda).reduce((acc, g) => acc + (g.monto || 0), 0);
+      // 1. VENTAS AL CONTADO: Afectan Caja e Ingresos Brutos
+      const ventasContado = ventas.filter(v => 
+        !v.producto.includes('(Fiado a') && 
+        !v.producto.startsWith('Abono de deuda')
+      );
+      
+      // 2. VENTAS REALES (Contado + Fiado + Anticipo): Afectan Costos y Ganancia
+      const ventasReales = ventas.filter(v => 
+        !v.producto.startsWith('Abono de deuda')
+      );
 
-  const totalComprasContado = compras.filter(c => c.metodo === 'contado').reduce((acc, c) => acc + (c.total || 0), 0);
+      let totalIngresosVentas = 0;
+      let totalCostos = 0;
+      let gananciaReal = 0;      // Solo contado
+      let gananciaProyectada = 0; // Fiado + anticipo
+      
+      // --- CÁLCULO PARA CAJA E INGRESOS (solo contado) ---
+      ventasContado.forEach(v => {
+        totalIngresosVentas += v.ingreso || 0;
+        gananciaReal += v.ganancia || 0;
+      });
+      
+      // --- CÁLCULO PARA COSTOS Y GANANCIA TOTAL ---
+      ventasReales.forEach(v => {
+        totalCostos += v.costo || 0;
+        if (v.producto.includes('(Fiado a') || v.producto.includes('(Anticipo)')) {
+          gananciaProyectada += v.ganancia || 0;
+        }
+      });
+      
+      const totalGastosEfectivo = gastos.reduce((acc, g) => acc + (g.monto || 0), 0);
+      const totalGastosOperativos = gastos.filter(g => !g.esPagoDeuda).reduce((acc, g) => acc + (g.monto || 0), 0);
+      const totalComprasContado = compras.filter(c => c.metodo === 'contado').reduce((acc, c) => acc + (c.total || 0), 0);
 
-  const cajaReal = totalIngresosVentas - totalGastosEfectivo - totalComprasContado;
-  const gananciaNeta = totalGanancia - totalGastosOperativos; 
-  
-  let capitalNeto = 0;
-  productos.forEach(p => {
-    if (!esProductoFinal(p.nombre) && p.cantidad > 0) capitalNeto += p.cantidad * p.costo;
-  });
+      // Caja = solo dinero real
+      const cajaReal = totalIngresosVentas - totalGastosEfectivo - totalComprasContado;
+      
+      // Ganancia Neta = (real + proyectada) - gastos operativos
+      const totalGanancia = gananciaReal + gananciaProyectada;
+      const gananciaNeta = totalGanancia - totalGastosOperativos;
+      
+      let capitalNeto = 0;
+      productos.forEach(p => {
+        if (!esProductoFinal(p.nombre) && p.cantidad > 0) capitalNeto += p.cantidad * p.costo;
+      });
 
-  const totalPorCobrar = clientes.reduce((acc, cli) => acc + (cli.deuda || 0), 0);
-  const totalDeudaProv = proveedores.reduce((acc, p) => acc + (p.deuda || 0), 0);
+      const totalPorCobrar = clientes.reduce((acc, cli) => acc + (cli.deuda || 0), 0);
+      const totalDeudaProv = proveedores.reduce((acc, p) => acc + (p.deuda || 0), 0);
 
-  function setTextSafe(id, value) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = formatearDinero(value);
-  }
-  setTextSafe('fin-caja', cajaReal);
-  setTextSafe('fin-por-pagar', totalDeudaProv);
-  setTextSafe('fin-ganancia', gananciaNeta);
-  setTextSafe('fin-gastos', totalGastosOperativos);
-  setTextSafe('fin-compras', capitalNeto);
-  setTextSafe('fin-por-cobrar', totalPorCobrar);
-  setTextSafe('fin-ingresos', totalIngresosVentas);
-  setTextSafe('fin-costos', totalCostos);
-  
-  const finCajaEl = document.getElementById('fin-caja');
-  if(finCajaEl) finCajaEl.style.color = cajaReal >= 0 ? '#16A34A' : '#DC2626';
-  const finGananciaEl = document.getElementById('fin-ganancia');
-  if(finGananciaEl) finGananciaEl.style.color = gananciaNeta >= 0 ? '#16A34A' : '#DC2626';
-}
+      function setTextSafe(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+      }
+      
+      // --- DASHBOARD CON DESGLOSE ---
+      setTextSafe('fin-caja', formatearDinero(cajaReal));
+      setTextSafe('fin-por-pagar', formatearDinero(totalDeudaProv));
+      
+      // Ganancia Neta: número grande + desglose pequeño debajo
+      const finGananciaEl = document.getElementById('fin-ganancia');
+      if (finGananciaEl) {
+        finGananciaEl.innerHTML = `
+          <div style="font-size:24px; font-weight:700; color:${gananciaNeta >= 0 ? '#16A34A' : '#DC2626'};">
+            ${formatearDinero(gananciaNeta)}
+          </div>
+          <div style="font-size:11px; color:#8e8e93; margin-top:4px; font-weight:500; line-height:1.4;">
+            <span style="color:#16A34A;">● ${formatearDinero(gananciaReal)} real</span><br>
+            <span style="color:#D97706;">● ${formatearDinero(gananciaProyectada)} proyectada</span>
+          </div>
+        `;
+      }
+      
+      setTextSafe('fin-gastos', formatearDinero(totalGastosOperativos));
+      setTextSafe('fin-compras', formatearDinero(capitalNeto));
+      setTextSafe('fin-por-cobrar', formatearDinero(totalPorCobrar));
+      setTextSafe('fin-ingresos', formatearDinero(totalIngresosVentas));
+      setTextSafe('fin-costos', formatearDinero(totalCostos));
+      
+      const finCajaEl = document.getElementById('fin-caja');
+      if(finCajaEl) finCajaEl.style.color = cajaReal >= 0 ? '#16A34A' : '#DC2626';
+
+      // --- LISTA DE MOVIMIENTOS ---
+      const listaVentas = document.getElementById('lista-ventas');
+      const todasLasVentas = [...ventas].sort((a, b) => b.id - a.id);
+      
+      if (todasLasVentas.length === 0) {
+        listaVentas.innerHTML = '<div style="text-align:center; padding:20px; color:#8e8e93;">No hay ventas registradas</div>';
+      } else {
+        listaVentas.innerHTML = todasLasVentas.map(v => {
+          const esFiado = v.producto.includes('(Fiado a');
+          const esAnticipo = v.producto.includes('(Anticipo)');
+          const esAbono = v.producto.startsWith('Abono de deuda');
+          
+          let colorMonto, labelMonto, badgeHtml, gananciaHtml;
+          
+          if (esAbono) {
+            colorMonto = '#16A34A';
+            labelMonto = '+' + formatearDinero(v.ingreso);
+            badgeHtml = '<span style="font-size:10px; background:#DCFCE7; color:#166534; padding:2px 6px; border-radius:6px; font-weight:700; text-transform:uppercase; margin-left:6px;">Abono</span>';
+            gananciaHtml = '';
+          } else if (esFiado) {
+            colorMonto = '#D97706';
+            labelMonto = 'Fiado';
+            badgeHtml = '<span style="font-size:10px; background:#FFFBEB; color:#92400E; padding:2px 6px; border-radius:6px; font-weight:700; text-transform:uppercase; margin-left:6px;">Fiado</span>';
+            gananciaHtml = `<div style="font-size:12px; color:#16A34A; font-weight:600; margin-top:2px;">
+              💰 Ganancia proyectada: ${formatearDinero(v.ganancia)}
+            </div>`;
+          } else if (esAnticipo) {
+            colorMonto = '#8E44AD';
+            labelMonto = 'Anticipo';
+            badgeHtml = '<span style="font-size:10px; background:#F3E8FF; color:#6B21A8; padding:2px 6px; border-radius:6px; font-weight:700; text-transform:uppercase; margin-left:6px;">Anticipo</span>';
+            gananciaHtml = `<div style="font-size:12px; color:#16A34A; font-weight:600; margin-top:2px;">
+              💰 Ganancia proyectada: ${formatearDinero(v.ganancia)}
+            </div>`;
+          } else {
+            colorMonto = '#16A34A';
+            labelMonto = '+' + formatearDinero(v.ingreso);
+            badgeHtml = '<span style="font-size:10px; background:#F0FDF4; color:#166534; padding:2px 6px; border-radius:6px; font-weight:700; text-transform:uppercase; margin-left:6px;">Contado</span>';
+            gananciaHtml = `<div style="font-size:12px; color:#16A34A; font-weight:600; margin-top:2px;">
+              💰 Ganancia: ${formatearDinero(v.ganancia)}
+            </div>`;
+          }
+          
+          return `
+            <div class="venta-item">
+              <div class="venta-info">
+                <h4 style="color:#2C2420; display:flex; align-items:center; flex-wrap:wrap; font-size:15px;">
+                  ${v.cantidad}x ${v.producto.replace(' (Fiado a ', ' → ').replace(')', '')}
+                  ${badgeHtml}
+                </h4>
+                <p style="font-size:13px; color:#8e8e93;">${v.fecha}</p>
+                ${gananciaHtml}
+                ${(esFiado || esAnticipo) ? `<small style="color:#8e8e93; font-size:12px;">Costo materia prima: ${formatearDinero(v.costo)}</small>` : ''}
+              </div>
+              <div class="venta-monto" style="color: ${colorMonto}; text-align:right; font-size:16px; font-weight:700;">
+                <div>${labelMonto}</div>
+                ${(esFiado || esAnticipo) ? `<small style="font-size:12px; color:#8e8e93; font-weight:500;">Deuda: ${formatearDinero(v.deudaGenerada || 0)}</small>` : ''}
+              </div>
+            </div>`;
+        }).join('');
+      }
+    }
+
+    // ---------- LIMPIAR FINANZAS (CIERRE) ----------
+    document.getElementById('btn-limpiar-finanzas').addEventListener('click', () => {
+      const ventasAArchivar = ventas.filter(v => !v.producto.startsWith('Abono de deuda'));
+      const abonos = ventas.filter(v => v.producto.startsWith('Abono de deuda'));
+      
+      const ventasOperativas = ventas.filter(v => 
+        !v.producto.includes('(Fiado a') && 
+        !v.producto.startsWith('Abono de deuda')
+      );
+      
+      if (ventasOperativas.length === 0 && gastos.length === 0 && compras.length === 0 && producciones.length === 0) {
+        mostrarToast('No hay movimientos operativos que limpiar'); 
+        return;
+      }
+      
+      historialClientes = historialClientes.concat(ventasAArchivar);
+      
+      papeleraVentas = ventasOperativas;
+      papeleraGastos = gastos;
+      papeleraCompras = compras;
+      papeleraProducciones = producciones;
+      
+      ventas = abonos;
+      gastos = [];
+      compras = [];
+      producciones = [];
+      
+      guardarDatos();
+      renderizarFinanzas();
+      renderizarGastos();
+      renderizarClientes();
+      renderizarProveedores();
+      
+      mostrarToast('✅ Cierre completado. Clientes, proveedores e inventario intactos. Toca para deshacer (30s)', 30000);
+      
+      let timeout = setTimeout(() => {
+        papeleraVentas = []; 
+        papeleraGastos = [];
+        papeleraCompras = [];
+        papeleraProducciones = [];
+        toastEl.onclick = null;
+      }, 30000);
+      
+      toastEl.onclick = () => {
+        clearTimeout(timeout);
+        ventas = [...abonos, ...papeleraVentas];
+        gastos = papeleraGastos;
+        compras = papeleraCompras;
+        producciones = papeleraProducciones;
+        papeleraVentas = []; 
+        papeleraGastos = [];
+        papeleraCompras = [];
+        papeleraProducciones = [];
+        guardarDatos();
+        renderizarFinanzas();
+        renderizarGastos();
+        toastEl.classList.remove('show');
+        mostrarToast('✅ Restaurado');
+        toastEl.onclick = null;
+      };
+    });
+
 
 
     function renderizarGastos() {
