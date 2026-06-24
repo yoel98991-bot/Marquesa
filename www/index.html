@@ -2936,7 +2936,7 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
       }
     };
 
-    // ---------- FINANZAS ----------
+
         // ---------- FINANZAS ----------
     function renderizarFinanzas() {
       // 1. VENTAS AL CONTADO: Afectan Caja e Ingresos Brutos
@@ -2952,8 +2952,8 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
 
       let totalIngresosVentas = 0;
       let totalCostos = 0;
-      let gananciaReal = 0;      // Solo contado
-      let gananciaProyectada = 0; // Fiado + anticipo
+      let gananciaReal = 0;
+      let gananciaProyectada = 0;
       
       // --- CÁLCULO PARA CAJA E INGRESOS (solo contado) ---
       ventasContado.forEach(v => {
@@ -2973,10 +2973,7 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
       const totalGastosOperativos = gastos.filter(g => !g.esPagoDeuda).reduce((acc, g) => acc + (g.monto || 0), 0);
       const totalComprasContado = compras.filter(c => c.metodo === 'contado').reduce((acc, c) => acc + (c.total || 0), 0);
 
-      // Caja = solo dinero real
       const cajaReal = totalIngresosVentas - totalGastosEfectivo - totalComprasContado;
-      
-      // Ganancia Neta = (real + proyectada) - gastos operativos
       const totalGanancia = gananciaReal + gananciaProyectada;
       const gananciaNeta = totalGanancia - totalGastosOperativos;
       
@@ -2993,11 +2990,9 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
         if (el) el.textContent = value;
       }
       
-      // --- DASHBOARD CON DESGLOSE ---
       setTextSafe('fin-caja', formatearDinero(cajaReal));
       setTextSafe('fin-por-pagar', formatearDinero(totalDeudaProv));
       
-      // Ganancia Neta: número grande + desglose pequeño debajo
       const finGananciaEl = document.getElementById('fin-ganancia');
       if (finGananciaEl) {
         finGananciaEl.innerHTML = `
@@ -3020,7 +3015,7 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
       const finCajaEl = document.getElementById('fin-caja');
       if(finCajaEl) finCajaEl.style.color = cajaReal >= 0 ? '#16A34A' : '#DC2626';
 
-      // --- LISTA DE MOVIMIENTOS ---
+      // --- LISTA DE MOVIMIENTOS CON BOTÓN ELIMINAR ---
       const listaVentas = document.getElementById('lista-ventas');
       const todasLasVentas = [...ventas].sort((a, b) => b.id - a.id);
       
@@ -3043,45 +3038,47 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
             colorMonto = '#D97706';
             labelMonto = 'Fiado';
             badgeHtml = '<span style="font-size:10px; background:#FFFBEB; color:#92400E; padding:2px 6px; border-radius:6px; font-weight:700; text-transform:uppercase; margin-left:6px;">Fiado</span>';
-            gananciaHtml = `<div style="font-size:12px; color:#16A34A; font-weight:600; margin-top:2px;">
-              💰 Ganancia proyectada: ${formatearDinero(v.ganancia)}
-            </div>`;
+            gananciaHtml = `<div style="font-size:12px; color:#16A34A; font-weight:600; margin-top:2px;">💰 Ganancia proyectada: ${formatearDinero(v.ganancia)}</div>`;
           } else if (esAnticipo) {
             colorMonto = '#8E44AD';
             labelMonto = 'Anticipo';
             badgeHtml = '<span style="font-size:10px; background:#F3E8FF; color:#6B21A8; padding:2px 6px; border-radius:6px; font-weight:700; text-transform:uppercase; margin-left:6px;">Anticipo</span>';
-            gananciaHtml = `<div style="font-size:12px; color:#16A34A; font-weight:600; margin-top:2px;">
-              💰 Ganancia proyectada: ${formatearDinero(v.ganancia)}
-            </div>`;
+            gananciaHtml = `<div style="font-size:12px; color:#16A34A; font-weight:600; margin-top:2px;">💰 Ganancia proyectada: ${formatearDinero(v.ganancia)}</div>`;
           } else {
             colorMonto = '#16A34A';
             labelMonto = '+' + formatearDinero(v.ingreso);
             badgeHtml = '<span style="font-size:10px; background:#F0FDF4; color:#166534; padding:2px 6px; border-radius:6px; font-weight:700; text-transform:uppercase; margin-left:6px;">Contado</span>';
-            gananciaHtml = `<div style="font-size:12px; color:#16A34A; font-weight:600; margin-top:2px;">
-              💰 Ganancia: ${formatearDinero(v.ganancia)}
-            </div>`;
+            gananciaHtml = `<div style="font-size:12px; color:#16A34A; font-weight:600; margin-top:2px;">💰 Ganancia: ${formatearDinero(v.ganancia)}</div>`;
           }
           
           return `
-            <div class="venta-item">
-              <div class="venta-info">
-                <h4 style="color:#2C2420; display:flex; align-items:center; flex-wrap:wrap; font-size:15px;">
+            <div class="venta-item" style="position:relative; padding-right:50px; align-items:flex-start;">
+              <div class="venta-info" style="flex:1;">
+                <h4 style="color:#2C2420; display:flex; align-items:center; flex-wrap:wrap; font-size:15px; margin-bottom:4px;">
                   ${v.cantidad}x ${v.producto.replace(' (Fiado a ', ' → ').replace(')', '')}
                   ${badgeHtml}
                 </h4>
-                <p style="font-size:13px; color:#8e8e93;">${v.fecha}</p>
+                <p style="font-size:13px; color:#8e8e93; margin-bottom:2px;">${v.fecha}</p>
                 ${gananciaHtml}
                 ${(esFiado || esAnticipo) ? `<small style="color:#8e8e93; font-size:12px;">Costo materia prima: ${formatearDinero(v.costo)}</small>` : ''}
               </div>
-              <div class="venta-monto" style="color: ${colorMonto}; text-align:right; font-size:16px; font-weight:700;">
+              <div class="venta-monto" style="color: ${colorMonto}; text-align:right; font-size:16px; font-weight:700; flex-shrink:0;">
                 <div>${labelMonto}</div>
                 ${(esFiado || esAnticipo) ? `<small style="font-size:12px; color:#8e8e93; font-weight:500;">Deuda: ${formatearDinero(v.deudaGenerada || 0)}</small>` : ''}
               </div>
+              <button class="icon-btn danger" 
+                      onclick="eliminarVentaIndividual(${v.id})" 
+                      style="position:absolute; right:0; top:12px; width:36px; height:36px; font-size:14px; flex-shrink:0;" 
+                      title="Eliminar este movimiento">
+                <i class="fas fa-trash"></i>
+              </button>
             </div>`;
         }).join('');
       }
     }
 
+
+    
     // ---------- LIMPIAR FINANZAS (CIERRE) ----------
     document.getElementById('btn-limpiar-finanzas').addEventListener('click', () => {
       const ventasAArchivar = ventas.filter(v => !v.producto.startsWith('Abono de deuda'));
