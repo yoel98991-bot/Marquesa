@@ -921,56 +921,36 @@
       document.getElementById('modal-info-finanzas').classList.add('active');
     };
 
-    const PRODUCTOS_INICIALES = [
+       const PRODUCTOS_INICIALES = [
+      // === MATERIA PRIMA ===
       { nombre: "Harina", cantidad: 0, unidad: "sacos", costo: 38.5, precio: 0, paqueteCantidad: 0 },
       { nombre: "Azúcar", cantidad: 0, unidad: "sacos", costo: 66.0, precio: 0, paqueteCantidad: 0 },
-      { nombre: "Manteca", cantidad: 0, unidad: "kg", costo: 3.5, precio: 0, paqueteCantidad: 0 }, 
-
-
-      
+      { nombre: "Manteca", cantidad: 0, unidad: "kg", costo: 3.5, precio: 0, paqueteCantidad: 0 },
       { nombre: "Micovan", cantidad: 0, unidad: "kg", costo: 7.0, precio: 0, paqueteCantidad: 0 },
       { nombre: "Bicarbonato", cantidad: 0, unidad: "kg", costo: 6.0, precio: 0, paqueteCantidad: 0 },
       { nombre: "Polvo de hornear", cantidad: 0, unidad: "kg", costo: 6.0, precio: 0, paqueteCantidad: 0 },
       { nombre: "Esencias vainilla y anís", cantidad: 0, unidad: "kg", costo: 5.0, precio: 0, paqueteCantidad: 0 },
       { nombre: "Sabor vainilla", cantidad: 0, unidad: "kg", costo: 5.0, precio: 0, paqueteCantidad: 0 },
       { nombre: "Colorante", cantidad: 0, unidad: "L", costo: 11.0, precio: 0, paqueteCantidad: 0 },
-      { nombre: "Guayaba", cantidad: 0, unidad: "kg", costo: 2.0, precio: 0, paqueteCantidad: 0 }, 
+      { nombre: "Guayaba", cantidad: 0, unidad: "kg", costo: 2.0, precio: 0, paqueteCantidad: 0 },
       { nombre: "Arequipe (Tobo)", cantidad: 0, unidad: "kg", costo: 4.0, precio: 0, paqueteCantidad: 0 },
       { nombre: "Levadura", cantidad: 0, unidad: "kg", costo: 5.0, precio: 0, paqueteCantidad: 0 },
-      { nombre: "Bolsas 1k", cantidad: 0, unidad: "unidades", costo: 0.012, precio: 0, paqueteCantidad: 0 },
-      { nombre: "Bolsas 22x60", cantidad: 0, unidad: "unidades", costo: 0.028, precio: 0, paqueteCantidad: 0 },
-      { nombre: "Bolsas 24x60", cantidad: 0, unidad: "unidades", costo: 0.03, precio: 0, paqueteCantidad: 0 },
-      { nombre: "Bolsas 20x50", cantidad: 0, unidad: "unidades", costo: 0.025, precio: 0, paqueteCantidad: 0 },
-      { nombre: "Bolsas canilla 3", cantidad: 0, unidad: "unidades", costo: 0.025, precio: 0, paqueteCantidad: 0 },
       { nombre: "Anís en granos", cantidad: 0, unidad: "kg", costo: 4.0, precio: 0, paqueteCantidad: 0 },
       { nombre: "Sal", cantidad: 0, unidad: "kg", costo: 0.5, precio: 0, paqueteCantidad: 0 },
       { nombre: "Coco", cantidad: 0, unidad: "kg", costo: 7.0, precio: 0, paqueteCantidad: 0 },
       { nombre: "Frutilla", cantidad: 0, unidad: "kg", costo: 8.0, precio: 0, paqueteCantidad: 0 },
-      { nombre: "Paquete Catalinas 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.0, paqueteCantidad: 0 },
-      { nombre: "Catalinas sueltas (unidad)", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.3, paqueteCantidad: 0 },
-      { nombre: "Paquete Polvorosas 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.5, paqueteCantidad: 0 },
-      { nombre: "Polvorosas sueltas (unidad)", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.35, paqueteCantidad: 0 },
-      { nombre: "Paquete Cortaos 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.0, paqueteCantidad: 0 },
-      { nombre: "Cortaos sueltas (unidad)", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.3, paqueteCantidad: 0 },
-      { nombre: "Paquete Catalinas pequeñas 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.5, paqueteCantidad: 0 },
-      { nombre: "Catalinas pequeñas sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.2, paqueteCantidad: 0 },
-      { nombre: "Paquete Roscas pequeñas 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.5, paqueteCantidad: 0 },
-      { nombre: "Roscas pequeñas sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.2, paqueteCantidad: 0 },
-      { nombre: "Paquete Pan andino 1kg", quantity: 0, unidad: "unidades", costo: 0, precio: 4.0, paqueteCantidad: 0 },
-      { nombre: "Pan andino sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 2.0, paqueteCantidad: 0 },
-      { nombre: "Paquete Pan de guayaba 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 4.0, paqueteCantidad: 0 },
-      { nombre: "Pan de guayaba sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.5, paqueteCantidad: 0 },
-      { nombre: "Paquete Pan salado 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.0, paqueteCantidad: 0 },
-      { nombre: "Pan salado sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.6, paqueteCantidad: 0 },
-      { nombre: "Paquete Pan francés 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.0, paqueteCantidad: 0 },
-      { nombre: "Pan francés sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.3, paqueteCantidad: 0 },
-      { nombre: "Paquete Pan siciliano 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.5, paqueteCantidad: 0 },
-      { nombre: "Pan siciliano sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.9, paqueteCantidad: 0 },
-      { nombre: "Paquete Pan campesino 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.5, paqueteCantidad: 0 },
-      { nombre: "Pan campesino sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 1.5, paqueteCantidad: 0 },
-      { nombre: "Paquete Lenguas 1kg", cantidad: 0, unidad: "unidades", costo: 0, precio: 3.0, paqueteCantidad: 0 },
-      { nombre: "Lenguas sueltas", cantidad: 0, unidad: "unidades", costo: 0, precio: 0.3, paqueteCantidad: 0 }
+      
+      // === EMPAQUE ===
+      { nombre: "Bolsas 1k", cantidad: 0, unidad: "unidades", costo: 0.012, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Bolsas 22x60", cantidad: 0, unidad: "unidades", costo: 0.028, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Bolsas 24x60", cantidad: 0, unidad: "unidades", costo: 0.03, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Bolsas 20x50", cantidad: 0, unidad: "unidades", costo: 0.025, precio: 0, paqueteCantidad: 0 },
+      { nombre: "Bolsas canilla 3", cantidad: 0, unidad: "unidades", costo: 0.025, precio: 0, paqueteCantidad: 0 }
+      
+      // ❌ NOTA: Los productos finales (Paquetes y sueltas) se crean 
+      // AUTOMÁTICAMENTE al producir en la sección Cocina
     ];
+
 
     const UNIDADES_PERMITIDAS = ['sacos', 'kg', 'g', 'L', 'ml', 'unidades'];
 
