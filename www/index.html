@@ -281,12 +281,26 @@
         <label style="font-weight: 600; display:block; margin-bottom:8px;">Receta a preparar:</label>
         <select id="receta-select" class="select-unit"></select>
       </div>
-      <div class="flex-row" style="margin-bottom: 16px;">
-        <div style="flex: 1;">
-          <label style="font-weight: 600; display:block; margin-bottom:8px;" id="label-cantidad">Cantidad (latas):</label>
-          <input type="number" id="cantidad-produccion" class="input-field" value="1" min="0.01" step="0.01">
-        </div>
+
+            <div style="margin-bottom: 16px;">
+        <label style="font-weight: 600; display:block; margin-bottom:8px;" id="label-cantidad">Bandejas / Latas completas:</label>
+        <input type="number" id="cantidad-produccion" class="input-field" value="1" min="0" step="1" inputmode="numeric">
       </div>
+      
+      <div style="margin-bottom: 16px;">
+        <label style="font-weight: 600; display:block; margin-bottom:8px;">Unidades sueltas adicionales:</label>
+        <input type="number" id="cantidad-sueltas-produccion" class="input-field" value="0" min="0" step="1" inputmode="numeric" placeholder="Ej: 22 (la última bandeja incompleta)">
+        <p style="font-size: 12px; color: #8e8e93; margin-top: 6px;">
+          💡 Si la última bandeja salió incompleta, pon aquí las unidades que sí salieron (ej: 22, 25, 28)
+        </p>
+      </div>
+      
+      <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 14px; padding: 14px; margin-bottom: 16px; text-align: center;">
+        <span style="font-size: 13px; color: #8e8e93; font-weight: 600;">TOTAL A PRODUCIR</span>
+        <div style="font-size: 32px; font-weight: 700; color: #16A34A; margin-top: 4px;" id="total-unidades-produccion">40</div>
+        <div style="font-size: 13px; color: #8e8e93; margin-top: 4px;" id="detalle-unidades-produccion">1 bandeja × 40 unid.</div>
+      </div>
+
       
       <div id="resumen-produccion" class="resumen-produccion"></div>
       <div class="recipe-box" id="receta-dinamica"></div>
@@ -1816,34 +1830,57 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
     });
     document.getElementById('cantidad-ingreso').addEventListener('focus', actualizarTotalCompraEstimado);
 
-    // ---------- PRODUCCIÓN ----------
-    function actualizarVistaReceta() {
+
+        function actualizarVistaReceta() {
       if (!recetaActual) return;
-      const cantidadLatas = parseFloat(document.getElementById('cantidad-produccion').value) || 1;
+      
+      const bandejasCompletas = parseFloat(document.getElementById('cantidad-produccion').value) || 1;
+      const unidadesSueltas = parseFloat(document.getElementById('cantidad-sueltas-produccion').value) || 0;
       const unidadesPorLata = recetaActual.unidadesPorLata;
       const latasBase = recetaActual.latasBase;
-      const factorEscala = cantidadLatas / latasBase;
-      const totalUnidades = cantidadLatas * unidadesPorLata;
-      let html = `<div class="recipe-title">🧾 Ingredientes para ${cantidadLatas} ${recetaActual.unidadProduccion} (${totalUnidades.toFixed(0)} unid.)</div>`;
+      
+      // Total real de unidades (bandejas completas + sueltas)
+      const totalUnidades = (bandejasCompletas * unidadesPorLata) + unidadesSueltas;
+      
+      // Factor de escala basado en UNIDADES totales, no bandejas
+      // Si la receta base es 1 bandeja = 40 unidades, y yo produzco 302 unidades
+      // factor = 302 / 40 = 7.55
+      const unidadesBase = latasBase * unidadesPorLata;
+      const factorEscala = totalUnidades / unidadesBase;
+      
+      let html = `<div class="recipe-title">🧾 Ingredientes para ${bandejasCompletas} bandeja${bandejasCompletas !== 1 ? 's' : ''} + ${unidadesSueltas} sueltas = <strong>${Math.floor(totalUnidades)} unid.</strong></div>`;
+      
       let costoTotalReceta = 0;
       recetaActual.ingredientes.forEach(ing => {
         const prodDB = encontrarProducto(ing.nombre);
-        const cantidadNecesaria = ing.cantidad * factorEscala; 
+        // Cantidad proporcional a las unidades reales producidas
+        const cantidadNecesaria = ing.cantidad * factorEscala;
+        
         let costoIngrediente = 0;
         if (prodDB) {
            const cantEnBaseDB = convertirABase(cantidadNecesaria, ing.unidad, prodDB.unidad, ing.nombre);
            costoIngrediente = prodDB.costo * cantEnBaseDB;
         }
         costoTotalReceta += costoIngrediente;
+        
         html += `<div class="ingredient-row">
           <span>${ing.nombre}</span> 
           <span><strong>${cantidadNecesaria.toFixed(3)} ${ing.unidad}</strong> <small style="color:#8e8e93">(${formatearDinero(costoIngrediente)})</small></span>
         </div>`;
       });
+      
       let paquetes = 0;
+      let unidadesParaEmpaque = totalUnidades;
+      
       if (recetaActual.productoResultante.tipo === 'compuesto') {
         const up = recetaActual.productoResultante.paquete.unidadesPorPaquete;
+        
+        // Paquetes completos que se pueden armar
         paquetes = Math.floor(totalUnidades / up);
+        
+        // Unidades sueltas que quedan (incluye las que el usuario ya especificó + sobrantes de empaquetado)
+        const sueltasDeEmpaque = totalUnidades % up;
+        
         if (recetaActual.productoResultante.insumoEmpaque) {
           const bolsaDB = encontrarProducto(recetaActual.productoResultante.insumoEmpaque.nombre);
           const costoBolsas = bolsaDB ? (bolsaDB.costo * paquetes) : 0;
@@ -1853,19 +1890,18 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
             <span><strong>${paquetes} und</strong> <small style="color:#8e8e93">(${formatearDinero(costoBolsas)})</small></span>
           </div>`;
         }
-      }
-      const costoPorPaquete = paquetes > 0 ? (costoTotalReceta / paquetes) : 0;
-      const costoPorUnidadSuelta = totalUnidades > 0 ? (costoTotalReceta / totalUnidades) : 0;
-      
-      html += `<div class="costo-destacado">Total Costo Inversión: ${formatearDinero(costoTotalReceta)}</div>`;
-      if(paquetes > 0) html += `<div style="text-align:center; font-size:13px; color:#8e8e93; margin-top:10px;">Costo estimado por paquete: ${formatearDinero(costoPorPaquete)}</div>`;
-      document.getElementById('receta-dinamica').innerHTML = html;
-      
-      let resumen = `<i class="fas fa-cookie"></i> Producción Total: <strong>${totalUnidades.toFixed(0)} unid.</strong>`;
-      if (recetaActual.productoResultante.tipo === 'compuesto') {
+        
+        html += `<div class="costo-destacado">Total Costo Inversión: ${formatearDinero(costoTotalReceta)}</div>`;
+        
+        if(paquetes > 0) {
+          html += `<div style="text-align:center; font-size:13px; color:#8e8e93; margin-top:10px;">Costo estimado por paquete: ${formatearDinero(costoTotalReceta / paquetes)}</div>`;
+        }
+        
+        // Resumen de producción
+        let resumen = `<i class="fas fa-cookie"></i> Producción Total: <strong>${Math.floor(totalUnidades)} unid.</strong>`;
         resumen += `<br><i class="fas fa-box" style="margin-top:6px;"></i> Paquetes armados: <strong>${paquetes}</strong>`;
-        const sueltasRestantes = totalUnidades % recetaActual.productoResultante.paquete.unidadesPorPaquete;
-        resumen += `<br><i class="fas fa-cubes" style="margin-top:6px;"></i> Unidades sueltas: <strong>${sueltasRestantes.toFixed(0)}</strong>`;
+        resumen += `<br><i class="fas fa-cubes" style="margin-top:6px;"></i> Unidades sueltas: <strong>${Math.floor(sueltasDeEmpaque)}</strong>`;
+        
         document.getElementById('card-conversion').style.display = 'block';
         const sueltoNom = recetaActual.productoResultante.suelto.nombre;
         const paqueteNom = recetaActual.productoResultante.paquete.nombre;
@@ -1873,19 +1909,182 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
         document.getElementById('info-conversion').textContent = `Convierte ${ups} ${sueltoNom} en 1 ${paqueteNom} usando una bolsa.`;
         const pSueltas = encontrarProducto(sueltoNom);
         document.getElementById('estado-sueltas').innerHTML = `${sueltoNom} en stock: ${pSueltas ? pSueltas.cantidad : 0} unidades`;
+        
+        document.getElementById('resumen-produccion').innerHTML = resumen;
+        
       } else {
+        html += `<div class="costo-destacado">Total Costo Inversión: ${formatearDinero(costoTotalReceta)}</div>`;
         document.getElementById('card-conversion').style.display = 'none';
+        document.getElementById('resumen-produccion').innerHTML = `<i class="fas fa-cookie"></i> Producción Total: <strong>${Math.floor(totalUnidades)} unid.</strong>`;
       }
-      document.getElementById('resumen-produccion').innerHTML = resumen;
+      
+      document.getElementById('receta-dinamica').innerHTML = html;
     }
 
-    document.getElementById('ejecutar-produccion').addEventListener('click', () => {
+    
+            // ---------- ACTUALIZAR VISTA DE PRODUCCIÓN ----------
+    function actualizarTotalProduccion() {
+      if (!recetaActual) {
+        console.warn('No hay receta seleccionada');
+        return;
+      }
+      
+      // Leer valores FRESH de los inputs cada vez
+      const bandejasInput = document.getElementById('cantidad-produccion');
+      const sueltasInput = document.getElementById('cantidad-sueltas-produccion');
+      
+      const bandejasCompletas = parseFloat(bandejasInput?.value) || 0;
+      const unidadesSueltas = parseFloat(sueltasInput?.value) || 0;
+      const unidadesPorLata = recetaActual.unidadesPorLata || 40;
+      const latasBase = recetaActual.latasBase || 1;
+      
+      // Total real de unidades
+      const totalUnidades = (bandejasCompletas * unidadesPorLata) + unidadesSueltas;
+      
+      // Actualizar UI de totales
+      const totalEl = document.getElementById('total-unidades-produccion');
+      const detalleEl = document.getElementById('detalle-unidades-produccion');
+      
+      if (totalEl) totalEl.textContent = Math.floor(totalUnidades);
+      
+      let detalle = '';
+      if (bandejasCompletas > 0 && unidadesSueltas > 0) {
+        detalle = `${bandejasCompletas} bandeja${bandejasCompletas !== 1 ? 's' : ''} × ${unidadesPorLata} + ${unidadesSueltas} sueltas = ${Math.floor(totalUnidades)} unid.`;
+      } else if (bandejasCompletas > 0) {
+        detalle = `${bandejasCompletas} bandeja${bandejasCompletas !== 1 ? 's' : ''} × ${unidadesPorLata} = ${Math.floor(totalUnidades)} unid.`;
+      } else if (unidadesSueltas > 0) {
+        detalle = `${unidadesSueltas} unidades sueltas`;
+      } else {
+        detalle = '0 unidades';
+      }
+      if (detalleEl) detalleEl.textContent = detalle;
+      
+      // Llamar a la vista de receta con el total calculado
+      actualizarVistaRecetaConTotal(totalUnidades, bandejasCompletas, unidadesSueltas);
+    }
+
+    function actualizarVistaRecetaConTotal(totalUnidades, bandejasCompletas, unidadesSueltas) {
       if (!recetaActual) return;
-      const cantidadLatas = parseFloat(document.getElementById('cantidad-produccion').value) || 1;
+      
+      const unidadesPorLata = recetaActual.unidadesPorLata || 40;
+      const latasBase = recetaActual.latasBase || 1;
+      
+      // Factor de escala: totalUnidades / unidadesBase
+      // unidadesBase = latasBase * unidadesPorLata (ej: 1 × 40 = 40)
+      const unidadesBase = latasBase * unidadesPorLata;
+      const factorEscala = totalUnidades / unidadesBase;
+      
+      console.log('DEBUG Producción:', {
+        bandejasCompletas,
+        unidadesSueltas,
+        totalUnidades,
+        unidadesBase,
+        factorEscala,
+        unidadesPorLata,
+        latasBase
+      });
+      
+      let html = `<div class="recipe-title">🧾 Ingredientes para ${Math.floor(totalUnidades)} unidades (factor: ${factorEscala.toFixed(2)}x)</div>`;
+      
+      let costoTotalReceta = 0;
+      
+      recetaActual.ingredientes.forEach((ing, idx) => {
+        const prodDB = encontrarProducto(ing.nombre);
+        // Cantidad proporcional al factor de escala
+        const cantidadNecesaria = ing.cantidad * factorEscala;
+        
+        let costoIngrediente = 0;
+        if (prodDB) {
+           const cantEnBaseDB = convertirABase(cantidadNecesaria, ing.unidad, prodDB.unidad, ing.nombre);
+           costoIngrediente = prodDB.costo * cantEnBaseDB;
+        }
+        costoTotalReceta += costoIngrediente;
+        
+        html += `<div class="ingredient-row">
+          <span>${ing.nombre}</span> 
+          <span><strong>${cantidadNecesaria.toFixed(3)} ${ing.unidad}</strong> <small style="color:#8e8e93">(${formatearDinero(costoIngrediente)})</small></span>
+        </div>`;
+      });
+      
+      // --- EMPAQUETADO Y PAQUETES ---
+      let paquetes = 0;
+      let unidadesSueltaEmpaque = 0;
+      
+      if (recetaActual.productoResultante.tipo === 'compuesto') {
+        const up = recetaActual.productoResultante.paquete.unidadesPorPaquete || 10;
+        
+        // Paquetes completos que se pueden armar del TOTAL
+        paquetes = Math.floor(totalUnidades / up);
+        // Unidades que sobran después de empaquetar
+        unidadesSueltaEmpaque = totalUnidades % up;
+        
+        // Bolsas necesarias (solo para paquetes completos)
+        if (recetaActual.productoResultante.insumoEmpaque) {
+          const bolsaDB = encontrarProducto(recetaActual.productoResultante.insumoEmpaque.nombre);
+          const costoBolsas = bolsaDB ? (bolsaDB.costo * paquetes) : 0;
+          costoTotalReceta += costoBolsas;
+          html += `<div class="ingredient-row">
+            <span>${recetaActual.productoResultante.insumoEmpaque.nombre}</span> 
+            <span><strong>${paquetes} und</strong> <small style="color:#8e8e93">(${formatearDinero(costoBolsas)})</small></span>
+          </div>`;
+        }
+        
+        html += `<div class="costo-destacado">Total Costo Inversión: ${formatearDinero(costoTotalReceta)}</div>`;
+        
+        if(paquetes > 0) {
+          html += `<div style="text-align:center; font-size:13px; color:#8e8e93; margin-top:10px;">Costo por paquete: ${formatearDinero(costoTotalReceta / paquetes)}</div>`;
+        }
+        
+        // --- RESUMEN DE PRODUCCIÓN ---
+        let resumen = `<i class="fas fa-cookie"></i> Producción Total: <strong>${Math.floor(totalUnidades)} unid.</strong>`;
+        resumen += `<br><i class="fas fa-box" style="margin-top:6px;"></i> Paquetes armados: <strong>${paquetes}</strong> (de ${up} unid.)`;
+        resumen += `<br><i class="fas fa-cubes" style="margin-top:6px;"></i> Unidades sueltas: <strong>${Math.floor(unidadesSueltaEmpaque)}</strong>`;
+        
+        document.getElementById('card-conversion').style.display = 'block';
+        const sueltoNom = recetaActual.productoResultante.suelto.nombre;
+        const paqueteNom = recetaActual.productoResultante.paquete.nombre;
+        document.getElementById('info-conversion').textContent = `Convierte ${up} ${sueltoNom} en 1 ${paqueteNom} usando una bolsa.`;
+        const pSueltas = encontrarProducto(sueltoNom);
+        document.getElementById('estado-sueltas').innerHTML = `${sueltoNom} en stock: ${pSueltas ? pSueltas.cantidad : 0} unidades`;
+        
+        document.getElementById('resumen-produccion').innerHTML = resumen;
+        
+      } else {
+        // Sin empaquetado
+        html += `<div class="costo-destacado">Total Costo Inversión: ${formatearDinero(costoTotalReceta)}</div>`;
+        document.getElementById('card-conversion').style.display = 'none';
+        document.getElementById('resumen-produccion').innerHTML = `<i class="fas fa-cookie"></i> Producción Total: <strong>${Math.floor(totalUnidades)} unid.</strong>`;
+      }
+      
+      document.getElementById('receta-dinamica').innerHTML = html;
+    }
+
+    // Función legacy para compatibilidad (llama a la nueva con valores actuales)
+    function actualizarVistaReceta() {
+      actualizarTotalProduccion();
+    }
+
+
+      document.getElementById('ejecutar-produccion').addEventListener('click', () => {
+      if (!recetaActual) return;
+      
+      const bandejasCompletas = parseFloat(document.getElementById('cantidad-produccion').value) || 0;
+      const unidadesSueltas = parseFloat(document.getElementById('cantidad-sueltas-produccion').value) || 0;
       const unidadesPorLata = recetaActual.unidadesPorLata;
       const latasBase = recetaActual.latasBase;
-      const factorEscala = cantidadLatas / latasBase;
-      const totalUnidades = cantidadLatas * unidadesPorLata;
+      
+      const totalUnidades = (bandejasCompletas * unidadesPorLata) + unidadesSueltas;
+      
+      if (totalUnidades <= 0) {
+        mostrarToast('Ingresa al menos una bandeja o unidades sueltas', 2500);
+        return;
+      }
+      
+      // Factor de escala basado en unidades totales
+      const unidadesBase = latasBase * unidadesPorLata;
+      const factorEscala = totalUnidades / unidadesBase;
+      
+      // Verificar ingredientes
       for (let ing of recetaActual.ingredientes) {
         const prod = encontrarProducto(ing.nombre);
         if (!prod) { mostrarToast(`Producto "${ing.nombre}" no existe en inventario`, 2500); return; }
@@ -1896,7 +2095,8 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
           return; 
         }
       }
-      let paquetes = 0;
+      
+      // Consumir ingredientes
       let costoProduccion = 0; 
       for (let ing of recetaActual.ingredientes) {
         const p = encontrarProducto(ing.nombre);
@@ -1905,9 +2105,13 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
         costoProduccion += p.costo * cantConvertida;
         p.cantidad -= cantConvertida;
       }
+      
+      let paquetes = 0;
+      
       if (recetaActual.productoResultante.tipo === 'compuesto') {
         const up = recetaActual.productoResultante.paquete.unidadesPorPaquete;
         paquetes = Math.floor(totalUnidades / up);
+        
         if (recetaActual.productoResultante.insumoEmpaque) {
           const insumo = recetaActual.productoResultante.insumoEmpaque;
           const prodIns = encontrarProducto(insumo.nombre);
@@ -1918,6 +2122,8 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
           prodIns.cantidad -= paquetes;
           costoProduccion += prodIns.costo * paquetes;
         }
+        
+        // --- PAQUETES ---
         let pPaq = encontrarProducto(recetaActual.productoResultante.paquete.nombre);
         if (!pPaq) { 
           pPaq = { nombre: recetaActual.productoResultante.paquete.nombre, cantidad: 0, unidad: 'unidades', costo: 0, precio: 0, paqueteCantidad: 0 };
@@ -1926,15 +2132,18 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
         pPaq.cantidad += paquetes;
         if (paquetes > 0) pPaq.costo = costoProduccion / paquetes;
         
+        // --- SUELTAS (incluye las que el usuario especificó + sobrantes de empaquetado) ---
         let pSuel = encontrarProducto(recetaActual.productoResultante.suelto.nombre);
         if (!pSuel) { 
           pSuel = { nombre: recetaActual.productoResultante.suelto.nombre, cantidad: 0, unidad: 'unidades', costo: 0, precio: 0, paqueteCantidad: 0 };
           productos.push(pSuel);
         }
-        const sueltasGeneradas = totalUnidades % up;
-        pSuel.cantidad += sueltasGeneradas;
-        if (sueltasGeneradas > 0) pSuel.costo = costoProduccion / totalUnidades;
+        const sueltasTotales = totalUnidades % up;
+        pSuel.cantidad += sueltasTotales;
+        if (sueltasTotales > 0) pSuel.costo = costoProduccion / totalUnidades;
+        
       } else {
+        // --- SOLO SUELTAS ---
         let pSuel = encontrarProducto(recetaActual.productoResultante.suelto.nombre);
         if (!pSuel) { 
           pSuel = { nombre: recetaActual.productoResultante.suelto.nombre, cantidad: 0, unidad: 'unidades', costo: 0, precio: 0, paqueteCantidad: 0 };
@@ -1948,15 +2157,23 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
         id: Date.now(),
         fecha: new Date().toLocaleString('es-VE', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}),
         producto: recetaActual.nombre,
-        cantidad: totalUnidades.toFixed(0),
+        cantidad: Math.floor(totalUnidades),
+        bandejas: bandejasCompletas,
+        sueltas: unidadesSueltas,
         costo: costoProduccion
       });
+      
+      // Resetear campos
+      document.getElementById('cantidad-produccion').value = '1';
+      document.getElementById('cantidad-sueltas-produccion').value = '0';
       
       guardarDatos();
       renderizarProductos(); 
       actualizarVistaReceta();
-      mostrarToast('✅ ¡Producción completada!', 2500);
+      mostrarToast(`✅ ¡Producción completada! ${Math.floor(totalUnidades)} unidades`, 2500);
     });
+
+   
 
     document.getElementById('convertir-sueltas').addEventListener('click', () => {
       if (!recetaActual || recetaActual.productoResultante.tipo !== 'compuesto') return;
@@ -2152,12 +2369,17 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
       recetaSelect.innerHTML = recetas.map(r => `<option value="${r.id}">${r.nombre}</option>`).join('');
     }
 
-    document.getElementById('receta-select').addEventListener('change', (e) => { 
-      recetaActual = recetas.find(r => r.id === e.target.value); 
-      actualizarVistaReceta();
+
+      document.getElementById('receta-select').addEventListener('change', (e) => { 
+      recetaActual = recetas.find(r => r.id === e.target.value);
+      // Resetear valores al cambiar de receta
+      document.getElementById('cantidad-produccion').value = '1';
+      document.getElementById('cantidad-sueltas-produccion').value = '0';
+      actualizarTotalProduccion();
       actualizarEstadoBotonEditar();
     });
 
+    
     // ---------- VENTAS PRINCIPALES ----------
     function renderizarGridVentas(filtro = '') {
       const grid = document.getElementById('grid-venta-directa');
@@ -3317,7 +3539,10 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
       actualizarVistaReceta();
       actualizarEstadoBotonEditar();
     });
-    document.getElementById('cantidad-produccion').addEventListener('input', actualizarVistaReceta);
+
+        document.getElementById('cantidad-produccion').addEventListener('input', actualizarTotalProduccion);
+    document.getElementById('cantidad-sueltas-produccion').addEventListener('input', actualizarTotalProduccion);
+
 
     document.getElementById('btn-sync-status').addEventListener('click', () => {
       if (syncStatus === 'error' || syncStatus === 'offline') {
