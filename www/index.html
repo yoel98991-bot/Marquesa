@@ -3139,12 +3139,12 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
     };
 
 
+
         // ---------- FINANZAS ----------
     function renderizarFinanzas() {
-      // 1. VENTAS AL CONTADO: Afectan Caja e Ingresos Brutos
+      // 1. VENTAS AL CONTADO Y ABONOS: Afectan Caja e Ingresos reales
       const ventasContado = ventas.filter(v => 
-        !v.producto.includes('(Fiado a') && 
-        !v.producto.startsWith('Abono de deuda')
+        !v.producto.includes('(Fiado a')
       );
       
       // 2. VENTAS REALES (Contado + Fiado + Anticipo): Afectan Costos y Ganancia
@@ -3157,7 +3157,7 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
       let gananciaReal = 0;
       let gananciaProyectada = 0;
       
-      // --- CÁLCULO PARA CAJA E INGRESOS (solo contado) ---
+      // --- CÁLCULO PARA CAJA E INGRESOS (contado + abonos) ---
       ventasContado.forEach(v => {
         totalIngresosVentas += v.ingreso || 0;
         gananciaReal += v.ganancia || 0;
@@ -3279,69 +3279,120 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
       }
     }
 
+    window.eliminarVentaIndividual = function(id) {
+      const ventaIndex = ventas.findIndex(v => v.id === id);
+      if (ventaIndex === -1) return;
+      const v = ventas[ventaIndex];
+
+      if (!confirm('¿Estás seguro de eliminar este movimiento? Se restaurará el stock y/o la deuda asociada.')) return;
+
+      // 1. Si es un Abono (Restaurar la deuda al cliente)
+      if (v.producto.startsWith('Abono de deuda')) {
+        let nombreCli = v.producto.replace('Abono de deuda - ', '').replace(' (Deuda antigua)', '').trim();
+        let cli = clientes.find(c => c.nombre === nombreCli);
+        if (cli) cli.deuda += (v.ingreso || 0);
+      } 
+      // 2. Si es un Fiado (Restar la deuda al cliente y devolver stock)
+      else if (v.producto.includes('(Fiado a ')) {
+        let partes = v.producto.split('(Fiado a ');
+        let nombreCli = partes[1].replace(')', '').trim();
+        let cli = clientes.find(c => c.nombre === nombreCli);
+        if (cli && v.deudaGenerada) {
+            cli.deuda = Math.max(0, cli.deuda - v.deudaGenerada);
+        }
+        
+        let nombreProd = partes[0].trim();
+        let prod = encontrarProducto(nombreProd);
+        if (prod) prod.cantidad += v.cantidad;
+      }
+      // 3. Si es Anticipo (Solo devolver stock)
+      else if (v.producto.includes('(Anticipo)')) {
+        let nombreProd = v.producto.replace(' (Anticipo)', '').trim();
+        let prod = encontrarProducto(nombreProd);
+        if (prod) prod.cantidad += v.cantidad;
+      }
+      // 4. Venta al Contado normal (Devolver stock)
+      else {
+        if (v.producto !== 'Ingreso Manual a Caja (Aporte)') {
+          let prod = encontrarProducto(v.producto);
+          if (prod) prod.cantidad += v.cantidad;
+        }
+      }
+
+      // Eliminar el registro del historial
+      ventas.splice(ventaIndex, 1);
+      
+      // Guardar y actualizar vistas
+      guardarDatos();
+      renderizarFinanzas();
+      renderizarProductos();
+      
+      // Si la pestaña de clientes está abierta, actualizarla también
+      if (document.getElementById('clientes').classList.contains('active')) {
+          renderizarClientes();
+      }
+      
+      mostrarToast('🗑️ Movimiento eliminado y valores restaurados', 3000);
+    };
 
     
     // ---------- LIMPIAR FINANZAS (CIERRE) ----------
     document.getElementById('btn-limpiar-finanzas').addEventListener('click', () => {
-      const ventasAArchivar = ventas.filter(v => !v.producto.startsWith('Abono de deuda'));
-      const abonos = ventas.filter(v => v.producto.startsWith('Abono de deuda'));
-      
-      const ventasOperativas = ventas.filter(v => 
-        !v.producto.includes('(Fiado a') && 
-        !v.producto.startsWith('Abono de deuda')
-      );
-      
-      if (ventasOperativas.length === 0 && gastos.length === 0 && compras.length === 0 && producciones.length === 0) {
-        mostrarToast('No hay movimientos operativos que limpiar'); 
-        return;
-      }
-      
-      historialClientes = historialClientes.concat(ventasAArchivar);
-      
-      papeleraVentas = ventasOperativas;
-      papeleraGastos = gastos;
-      papeleraCompras = compras;
-      papeleraProducciones = producciones;
-      
-      ventas = abonos;
-      gastos = [];
-      compras = [];
-      producciones = [];
-      
-      guardarDatos();
-      renderizarFinanzas();
-      renderizarGastos();
-      renderizarClientes();
-      renderizarProveedores();
-      
-      mostrarToast('✅ Cierre completado. Clientes, proveedores e inventario intactos. Toca para deshacer (30s)', 30000);
-      
-      let timeout = setTimeout(() => {
-        papeleraVentas = []; 
-        papeleraGastos = [];
-        papeleraCompras = [];
-        papeleraProducciones = [];
-        toastEl.onclick = null;
-      }, 30000);
-      
-      toastEl.onclick = () => {
-        clearTimeout(timeout);
-        ventas = [...abonos, ...papeleraVentas];
-        gastos = papeleraGastos;
-        compras = papeleraCompras;
-        producciones = papeleraProducciones;
-        papeleraVentas = []; 
-        papeleraGastos = [];
-        papeleraCompras = [];
-        papeleraProducciones = [];
-        guardarDatos();
-        renderizarFinanzas();
-        renderizarGastos();
-        toastEl.classList.remove('show');
-        mostrarToast('✅ Restaurado');
-        toastEl.onclick = null;
-      };
-    });
+  // 1. Verificar si hay algo que limpiar
+  if (ventas.length === 0 && gastos.length === 0 && compras.length === 0 && producciones.length === 0) {
+    mostrarToast('No hay movimientos operativos que limpiar'); 
+    return;
+  }
+  
+  // 2. Guardar en papelera para el "Deshacer"
+  papeleraVentas = [...ventas];
+  papeleraGastos = [...gastos];
+  papeleraCompras = [...compras];
+  papeleraProducciones = [...producciones];
+  
+  // 3. Archivar todo en historial permanente (opcional, para que no se pierda el rastro)
+  historialClientes = historialClientes.concat([...ventas]);
+  
+  // 4. VACIAR TODO el movimiento operativo (esto lleva Caja, Ingresos, Costos y Ganancia a 0)
+  ventas = [];
+  gastos = [];
+  compras = [];
+  producciones = [];
+  
+  // 5. Guardar y refrescar
+  guardarDatos();
+  renderizarFinanzas();
+  renderizarGastos();
+  
+  // 6. Toast con opción de deshacer
+  mostrarToast('✅ Cierre completado. Inventario, clientes y proveedores intactos. Toca para deshacer (30s)', 30000);
+  
+  let timeout = setTimeout(() => {
+    papeleraVentas = []; 
+    papeleraGastos = [];
+    papeleraCompras = [];
+    papeleraProducciones = [];
+    toastEl.onclick = null;
+  }, 30000);
+  
+  toastEl.onclick = () => {
+    clearTimeout(timeout);
+    ventas = papeleraVentas;
+    gastos = papeleraGastos;
+    compras = papeleraCompras;
+    producciones = papeleraProducciones;
+    papeleraVentas = []; 
+    papeleraGastos = [];
+    papeleraCompras = [];
+    papeleraProducciones = [];
+    guardarDatos();
+    renderizarFinanzas();
+    renderizarGastos();
+    toastEl.classList.remove('show');
+    mostrarToast('✅ Restaurado');
+    toastEl.onclick = null;
+  };
+});
 
 
 
@@ -3379,72 +3430,7 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
       mostrarToast('✅ Gasto registrado y descontado', 2500);
     });
 
-  document.getElementById('btn-limpiar-finanzas').addEventListener('click', () => {
-  // Separar: fiados/abonos (historial de clientes) vs operativos (caja del período)
-  const ventasProtegidas = ventas.filter(v => 
-    v.producto.includes('(Fiado a') || 
-    v.producto.startsWith('Abono de deuda')
-  );
   
-  const ventasOperativas = ventas.filter(v => 
-    !v.producto.includes('(Fiado a') && 
-    !v.producto.startsWith('Abono de deuda')
-  );
-  
-  if (ventasOperativas.length === 0 && gastos.length === 0 && compras.length === 0 && producciones.length === 0) {
-    mostrarToast('No hay movimientos operativos que limpiar'); 
-    return;
-  }
-  
-  // Archivar fiados/abonos en historial permanente de clientes
-  historialClientes = historialClientes.concat(ventasProtegidas);
-  
-  // Guardar en papelera solo lo operativo (para el "deshacer")
-  papeleraVentas = ventasOperativas;
-  papeleraGastos = gastos;
-  papeleraCompras = compras;
-  papeleraProducciones = producciones;
-  
-  // Reset: ventas queda limpio (sin fiados ni abonos)
-  ventas = [];
-  gastos = [];
-  compras = [];
-  producciones = [];
-  
-  guardarDatos();
-  renderizarFinanzas();
-  renderizarGastos();
-  renderizarClientes();
-  renderizarProveedores();
-  
-  mostrarToast('✅ Cierre completado. Clientes, proveedores e inventario intactos. Toca para deshacer (30s)', 30000);
-  
-  let timeout = setTimeout(() => {
-    papeleraVentas = []; 
-    papeleraGastos = [];
-    papeleraCompras = [];
-    papeleraProducciones = [];
-    toastEl.onclick = null;
-  }, 30000);
-  
-  toastEl.onclick = () => {
-    clearTimeout(timeout);
-    ventas = papeleraVentas;
-    gastos = papeleraGastos;
-    compras = papeleraCompras;
-    producciones = papeleraProducciones;
-    papeleraVentas = []; 
-    papeleraGastos = [];
-    papeleraCompras = [];
-    papeleraProducciones = [];
-    guardarDatos();
-    renderizarFinanzas();
-    renderizarGastos();
-    toastEl.classList.remove('show');
-    mostrarToast('✅ Restaurado');
-    toastEl.onclick = null;
-  };
-});
 
 
 
