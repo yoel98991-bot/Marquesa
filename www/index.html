@@ -3141,6 +3141,7 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
 
 
         // ---------- FINANZAS ----------
+
     function renderizarFinanzas() {
       // 1. VENTAS AL CONTADO Y ABONOS: Afectan Caja e Ingresos reales
       const ventasContado = ventas.filter(v => 
@@ -3219,7 +3220,14 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
 
       // --- LISTA DE MOVIMIENTOS CON BOTÓN ELIMINAR ---
       const listaVentas = document.getElementById('lista-ventas');
-      const todasLasVentas = [...ventas].sort((a, b) => b.id - a.id);
+      
+      // OPTIMIZACIÓN: Filtramos para NO mostrar Fiados ni Abonos en la lista general de Finanzas
+      const ventasSoloFinanzas = ventas.filter(v => 
+        !v.producto.includes('(Fiado a') && 
+        !v.producto.startsWith('Abono de deuda')
+      );
+      
+      const todasLasVentas = [...ventasSoloFinanzas].sort((a, b) => b.id - a.id);
       
       if (todasLasVentas.length === 0) {
         listaVentas.innerHTML = '<div style="text-align:center; padding:20px; color:#8e8e93;">No hay ventas registradas</div>';
@@ -3279,6 +3287,7 @@ if (h) historialClientes = JSON.parse(h); else historialClientes = [];
       }
     }
 
+    
     window.eliminarVentaIndividual = function(id) {
       const ventaIndex = ventas.findIndex(v => v.id === id);
       if (ventaIndex === -1) return;
